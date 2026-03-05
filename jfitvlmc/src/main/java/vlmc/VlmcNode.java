@@ -26,7 +26,16 @@ public class VlmcNode implements Cloneable {
 			this.children.get(this.children.size() - 1).setParent(this);
 		}
 		this.label = node.getLabel();
-		this.dist = new NextSymbolsDistribution();
+		this.dist = copyDist(node.dist);
+	}
+
+	private static NextSymbolsDistribution copyDist(NextSymbolsDistribution src) {
+		if (src == null) return new NextSymbolsDistribution();
+		NextSymbolsDistribution copy = new NextSymbolsDistribution();
+		copy.getSymbols().addAll(src.getSymbols());
+		copy.getProbability().addAll(src.getProbability());
+		copy.totalCtx = src.totalCtx;
+		return copy;
 	}
 
 	public String getEdge() {
@@ -200,7 +209,7 @@ public class VlmcNode implements Cloneable {
 			System.out.println(e.getStackTrace());
 		}
 		node.children = new ArrayList<VlmcNode>();
-		node.dist = new NextSymbolsDistribution();
+		node.dist = copyDist(this.dist);
 		for (VlmcNode child : this.children) {
 			node.children.add((VlmcNode) child.clone());
 			node.children.get(node.children.size() - 1).setParent(node);
