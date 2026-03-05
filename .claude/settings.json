@@ -1,0 +1,73 @@
+{
+  "permissions": {
+    "allow": [
+      "Edit(*)",
+      "Write(*)",
+      "Read(*)",
+      "Bash(java:*)",
+      "Bash(javac:*)",
+      "Bash(mvn:*)",
+      "Bash(./mvnw:*)",
+      "Bash(make:*)",
+      "Bash(sleep *)",
+      "Bash(head *)",
+      "Bash(cat *)",
+      "Bash(tail *)",
+      "Bash(ls*)",
+      "Bash(mkdir*)",
+      "Bash(pwd*)",
+      "Bash(wc*)",
+      "Bash(file*)",
+      "Bash(cd *)",
+      "Bash(chmod*)",
+      "Bash(bash *)",
+      "Bash(which *)",
+      "Bash(echo *)",
+      "Bash(git status*)",
+      "Bash(git diff*)",
+      "Bash(git log*)",
+      "Bash(git add *)",
+      "Bash(git commit*)",
+      "Bash(git checkout*)",
+      "Bash(git branch*)",
+      "Bash(git rev-parse*)",
+      "Bash(git show-ref*)",
+      "Bash(git stash*)",
+      "Bash(git fetch*)",
+      "Bash(git pull*)",
+      "Bash(git push*)",
+      "Bash(git merge*)",
+      "Bash(gh *)"
+    ],
+    "deny": [
+      "Bash(rm -rf *)",
+      "Bash(mvn deploy*)",
+      "Bash(git push --force*)",
+      "Bash(git reset --hard*)"
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if echo \"$CLAUDE_FILE_PATH\" | grep -q '\\.java$'; then if command -v google-java-format >/dev/null 2>&1; then google-java-format --replace \"$CLAUDE_FILE_PATH\" 2>/dev/null; fi; fi; true"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if echo \"$CLAUDE_TOOL_INPUT\" | grep -qiE '(password|token|secret|credential).*='; then echo 'BLOCKED: possibile esposizione credenziali nel comando' >&2; exit 1; fi; true"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,58 @@
+# Java
+*.class
+*.jar
+*.war
+*.ear
+*.nar
+hs_err_pid*
+replay_pid*
+
+# Maven
+target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+buildNumber.properties
+.mvn/timing.properties
+.mvn/wrapper/maven-wrapper.jar
+
+# IDE
+.idea/
+*.iml
+*.iws
+.project
+.classpath
+.settings/
+.factorypath
+.vscode/
+*.swp
+*.swo
+*~
+.metadata/
+bin/
+RemoteSystemsTempFiles/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Local JARs (legacy, dependencies should come from Maven)
+lib/
+
+# Pre-built JARs (regenerable with mvn package)
+dist/
+
+# Generated output files
+*.mat
+*.vlmc
+*.dcdt
+
+# Eclipse/PyDev
+.pydevproject
+
+# Claude (track commands/settings/skills, ignore runtime artifacts)
+.claude/artifacts/
+.claude/settings.local.json
