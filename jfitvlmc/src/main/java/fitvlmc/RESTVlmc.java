@@ -10,7 +10,7 @@ import com.sun.net.httpserver.HttpExchange;
 import vlmc.VlmcNode;
 import vlmc.VlmcRoot;
 
-class RESTVlmc implements HttpHandler {
+public class RESTVlmc implements HttpHandler {
 	private VlmcRoot vlmcRoot=null;
 	public RESTVlmc(VlmcRoot vlmc) {
 		this.vlmcRoot=vlmc;
