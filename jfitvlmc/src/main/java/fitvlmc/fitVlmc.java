@@ -342,13 +342,10 @@ public class fitVlmc {
 				});
 			}else if(fitVlmc.pred) {
 				if(fitVlmc.initCtx==null) {
-					try {
-						throw new Exception("initial ctx is required");
-					}catch (Exception e) {
-						e.printStackTrace();
-					}
+					System.err.println("ERROR: --initCtx is required with --pred");
+					System.exit(1);
 				}
-				
+
 				String[] ctxs = fitVlmc.initCtx.split(" ");
 				ArrayList<String> initCtx=new ArrayList<String>();
 				for (String s : ctxs) {
@@ -695,10 +692,10 @@ public class fitVlmc {
 				fitVlmc.vlmcOutFile = g.getOptarg();
 				break;
 			case 4:
-				fitVlmc.nSim = Integer.valueOf(g.getOptarg()).intValue();
+				fitVlmc.nSim = Integer.parseInt(g.getOptarg());
 				break;
 			case 5:
-				fitVlmc.k = Integer.valueOf(g.getOptarg()).intValue();
+				fitVlmc.k = Integer.parseInt(g.getOptarg());
 				break;
 			case 6:
 				fitVlmc.alfa = Float.valueOf(g.getOptarg());
@@ -719,7 +716,7 @@ public class fitVlmc {
 				fitVlmc.pred = true;
 				break;
 			case 12:
-				fitVlmc.pred_rest_port=Integer.valueOf(g.getOptarg());
+				fitVlmc.pred_rest_port=Integer.parseInt(g.getOptarg());
 				break;
 			case 13:
 			case 'h':
@@ -727,7 +724,7 @@ public class fitVlmc {
 				System.exit(0);
 				break;
 			case 14:
-				int maxDepth = Integer.valueOf(g.getOptarg());
+				int maxDepth = Integer.parseInt(g.getOptarg());
 				fitVlmc.maxNavigationDepth = maxDepth;
 				break;
 			case 15:

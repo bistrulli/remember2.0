@@ -243,7 +243,7 @@ public class SuffixArrayInt {
 	private static int lcpSuffix(SuffixInt s, SuffixInt t) {
 		int n = Math.min(s.length(), t.length());
 		for (int i = 0; i < n; i++) {
-			if (s.symbolAt(i) != t.symbolAt(i))
+			if (!s.symbolAt(i).equals(t.symbolAt(i)))
 				return i;
 		}
 		return n;

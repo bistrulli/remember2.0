@@ -393,7 +393,7 @@ public class VlmcRoot extends VlmcNode {
 		ArrayList<String> symbols = new ArrayList<String>();
 		ArrayList<Double> prob = new ArrayList<Double>();
 
-		nodeDist.totalCtx = Double.valueOf(nodePieces[1]);
+		nodeDist.totalCtx = Double.parseDouble(nodePieces[1]);
 
 		final Pattern probPattern = Pattern.compile("\\[([0-9]+\\.[0-9]*),\\\"([A-Za-z0-9\\$_!#]*)\\\"\\]");
 		final Matcher probMatcher = probPattern.matcher(nodePieces[0]);

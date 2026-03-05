@@ -2,6 +2,7 @@ package fitvlmc;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 
 import com.sun.net.httpserver.HttpHandler;
@@ -39,16 +40,18 @@ public class RESTVlmc implements HttpHandler {
 			return;
 		}
 		String response=node.getDist().toString();
-		exchange.sendResponseHeaders(200, response.length());
+		byte[] responseBytes = response.getBytes(StandardCharsets.UTF_8);
+		exchange.sendResponseHeaders(200, responseBytes.length);
         OutputStream os = exchange.getResponseBody();
-        os.write(response.getBytes());
+        os.write(responseBytes);
         os.close();
     }
 
     private void sendError(HttpExchange exchange, int code, String message) throws IOException {
-    	exchange.sendResponseHeaders(code, message.length());
+    	byte[] messageBytes = message.getBytes(StandardCharsets.UTF_8);
+    	exchange.sendResponseHeaders(code, messageBytes.length);
     	OutputStream os = exchange.getResponseBody();
-    	os.write(message.getBytes());
+    	os.write(messageBytes);
     	os.close();
     }
 }
