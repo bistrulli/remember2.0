@@ -67,6 +67,12 @@ public class fitVlmc {
 	private static Integer pred_rest_port=null;
 	// Maximum navigation depth for ECF traversal (prevents infinite recursion in cyclic models)
 	public static int maxNavigationDepth = 25;
+	// CSV event log options
+	public static String csvCaseColumn = "case_id";
+	public static String csvActivityColumn = "activity";
+	public static String csvTimestampColumn = "timestamp";
+	public static String csvSeparator = ",";
+	private static boolean csvOptionsSet = false;
 
 	public static void main(String[] args) {
 		Locale.setDefault(new Locale("en", "US"));
@@ -449,6 +455,12 @@ public class fitVlmc {
 		System.out.println("    --ecfoutfile <file>   Save auto-generated ECF model to file");
 		System.out.println("    --outfile <file>      Output file for generated traces");
 		System.out.println();
+		System.out.println("  CSV Event Log Options:");
+		System.out.println("    --csv-case <name>     CSV column name for case identifier (default: case_id)");
+		System.out.println("    --csv-activity <name> CSV column name for activity (default: activity)");
+		System.out.println("    --csv-timestamp <name> CSV column name for timestamp (default: timestamp)");
+		System.out.println("    --csv-separator <char> CSV field separator (default: ,)");
+		System.out.println();
 		System.out.println("  Advanced Options:");
 		System.out.println("    --vlmc <file>         Load pre-computed VLMC model instead of learning");
 		System.out.println("    --ntime <int>         Time parameter for processing");
@@ -501,7 +513,7 @@ public class fitVlmc {
 		}
 
 		int c;
-		LongOpt[] longopts = new LongOpt[16];
+		LongOpt[] longopts = new LongOpt[20];
 		longopts[0] = new LongOpt("ecf", LongOpt.REQUIRED_ARGUMENT, null, 0);
 		longopts[1] = new LongOpt("outfile", LongOpt.REQUIRED_ARGUMENT, null, 1);
 		longopts[2] = new LongOpt("infile", LongOpt.REQUIRED_ARGUMENT, null, 2);
@@ -526,6 +538,11 @@ public class fitVlmc {
 		// Maximum navigation depth for cyclic ECF models
 		longopts[14] = new LongOpt("maxdepth", LongOpt.REQUIRED_ARGUMENT, null, 14);
 		longopts[15] = new LongOpt("ecfoutfile", LongOpt.REQUIRED_ARGUMENT, null, 15);
+		// CSV event log options
+		longopts[16] = new LongOpt("csv-case", LongOpt.REQUIRED_ARGUMENT, null, 16);
+		longopts[17] = new LongOpt("csv-activity", LongOpt.REQUIRED_ARGUMENT, null, 17);
+		longopts[18] = new LongOpt("csv-timestamp", LongOpt.REQUIRED_ARGUMENT, null, 18);
+		longopts[19] = new LongOpt("csv-separator", LongOpt.REQUIRED_ARGUMENT, null, 19);
 
 		Getopt g = new Getopt("fitVlmc", args, "h", longopts);
 		g.setOpterr(true);
@@ -581,6 +598,22 @@ public class fitVlmc {
 				break;
 			case 15:
 				fitVlmc.ecfOutFile = g.getOptarg();
+				break;
+			case 16:
+				fitVlmc.csvCaseColumn = g.getOptarg();
+				fitVlmc.csvOptionsSet = true;
+				break;
+			case 17:
+				fitVlmc.csvActivityColumn = g.getOptarg();
+				fitVlmc.csvOptionsSet = true;
+				break;
+			case 18:
+				fitVlmc.csvTimestampColumn = g.getOptarg();
+				fitVlmc.csvOptionsSet = true;
+				break;
+			case 19:
+				fitVlmc.csvSeparator = g.getOptarg();
+				fitVlmc.csvOptionsSet = true;
 				break;
 			default:
 				System.err.println("Unknown option. Use --help for usage information.");
@@ -661,6 +694,10 @@ public class fitVlmc {
 
 	public SuffixArray getSa() {
 		return sa;
+	}
+
+	public static boolean isCsvOptionsSet() {
+		return csvOptionsSet;
 	}
 
 }
