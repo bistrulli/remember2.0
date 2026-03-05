@@ -323,12 +323,17 @@ public class VlmcRoot extends VlmcNode {
 				dist.getProbability().add(count);
 				dist.getSymbols().add(outEdge.getLabel());
 			}
-			// Normalize probabilities to sum to 1
 			if (usedCtx > 0) {
 				for (int i = 0; i < dist.getProbability().size(); i++) {
 					dist.getProbability().set(i, dist.getProbability().get(i) / usedCtx);
 				}
 				dist.totalCtx = usedCtx;
+			} else {
+				double uniform = 1.0 / e.getOut().size();
+				for (Edge outEdge : e.getOut()) {
+					dist.getProbability().add(uniform);
+					dist.getSymbols().add(outEdge.getLabel());
+				}
 			}
 		}
 		return dist;
