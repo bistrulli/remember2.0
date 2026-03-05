@@ -27,6 +27,7 @@ import org.antlr.v4.runtime.TokenStream;
 
 import ECFEntity.ECFListener;
 import ECFEntity.Flow;
+import org.apache.commons.math3.distribution.ChiSquaredDistribution;
 import suffixarray.SuffixArray;
 import antlr.ECFLexer;
 import antlr.ECFParser;
@@ -101,8 +102,9 @@ public class fitVlmc {
 		if (likelihoodOnly) {
 			fitVlmc.cutoff = 0.0;
 		} else if (!isPredictionMode || fitVlmc.alfa != null) {
-			fitVlmc.cutoff = jdistlib.ChiSquare.quantile(fitVlmc.alfa,
-					Math.max(0.1, learner.ecfModel.getEdges().size() - 1), false, false) / 2;
+			ChiSquaredDistribution chi2 = new ChiSquaredDistribution(
+					Math.max(0.1, learner.ecfModel.getEdges().size() - 1));
+			fitVlmc.cutoff = chi2.inverseCumulativeProbability(fitVlmc.alfa) / 2;
 		} else {
 			// In prediction mode with pre-trained model, cutoff is not needed
 			fitVlmc.cutoff = 0.0;

@@ -143,8 +143,12 @@ public class VlmcNode implements Cloneable {
 	public double KullbackLeibler() {
 		double KullbackLeibler = 0.0;
 		for (String symbol : this.getDist().symbols) {
-			KullbackLeibler += this.dist.getProbBySymbol(symbol)
-					* Math.log(this.dist.getProbBySymbol(symbol) / this.getParent().getDist().getProbBySymbol(symbol));
+			Double pChild = this.dist.getProbBySymbol(symbol);
+			Double pParent = this.getParent().getDist().getProbBySymbol(symbol);
+			if (pChild == null || pChild == 0 || pParent == null || pParent == 0) {
+				continue;
+			}
+			KullbackLeibler += pChild * Math.log(pChild / pParent);
 		}
 		return KullbackLeibler;
 	}
@@ -160,7 +164,7 @@ public class VlmcNode implements Cloneable {
 		if (this.getParent().getDist() == null)
 			this.parent.setDist(EcfNavigator.createNextSymbolDistribution(this.getParent().getCtx()));
 
-		if (this.parent.getLabel() != "root"
+		if (!"root".equals(this.parent.getLabel())
 				&& (this.KullbackLeibler() * this.dist.totalCtx <= fitVlmc.cutoff || this.dist.totalCtx < fitVlmc.k)) {
 			// if(this.parent.getLabel()!="root" && this.maxDifference()<=fitVlmc.cutoff) {
 			if (!this.getParent().getChildren().remove(this)) {

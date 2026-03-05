@@ -4,10 +4,17 @@
 	<modelVersion>4.0.0</modelVersion>
 
 	<groupId>it.sysma.vlmc</groupId>
-	<artifactId>jfitvlmc</artifactId>
+	<artifactId>vlmc-parent</artifactId>
 	<version>1.0.0-SNAPSHOT</version>
-	<name>jfitVLMC</name>
-	<description>Java implementation of VLMC learning algorithms</description>
+	<packaging>pom</packaging>
+
+	<name>VLMC Parent</name>
+	<description>Parent POM for VLMC learning project</description>
+
+	<modules>
+		<module>ecf</module>
+		<module>jfitvlmc</module>
+	</modules>
 
 	<properties>
 		<maven.compiler.source>17</maven.compiler.source>
@@ -24,86 +31,6 @@
 					<release>17</release>
 				</configuration>
 			</plugin>
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-surefire-plugin</artifactId>
-				<version>3.2.2</version>
-			</plugin>
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-assembly-plugin</artifactId>
-				<version>3.6.0</version>
-				<executions>
-					<execution>
-						<phase>package</phase>
-						<goals>
-							<goal>single</goal>
-						</goals>
-						<configuration>
-							<archive>
-								<manifest>
-									<mainClass>fitvlmc.fitVlmc</mainClass>
-								</manifest>
-							</archive>
-							<descriptorRefs>
-								<descriptorRef>jar-with-dependencies</descriptorRef>
-							</descriptorRefs>
-						</configuration>
-					</execution>
-				</executions>
-			</plugin>
 		</plugins>
 	</build>
-
-	<dependencies>
-		<!-- ECF dependency for ECF-specific classes -->
-		<dependency>
-			<groupId>it.sysma.vlmc</groupId>
-			<artifactId>ecf</artifactId>
-			<version>1.0.0-SNAPSHOT</version>
-		</dependency>
-
-		<!-- ANTLR runtime for parsing -->
-		<dependency>
-			<groupId>org.antlr</groupId>
-			<artifactId>antlr4-runtime</artifactId>
-			<version>4.7.2</version>
-		</dependency>
-
-		<!-- Apache Commons Math3 for mathematical operations -->
-		<dependency>
-			<groupId>org.apache.commons</groupId>
-			<artifactId>commons-math3</artifactId>
-			<version>3.6.1</version>
-		</dependency>
-
-		<!-- Apache Commons Lang3 for string and array utilities -->
-		<dependency>
-			<groupId>org.apache.commons</groupId>
-			<artifactId>commons-lang3</artifactId>
-			<version>3.12.0</version>
-		</dependency>
-
-		<!-- ASCII Art library for fancy banners -->
-		<dependency>
-			<groupId>com.github.lalyos</groupId>
-			<artifactId>jfiglet</artifactId>
-			<version>0.0.9</version>
-		</dependency>
-
-		<!-- jdistlib installed in local Maven repository -->
-		<dependency>
-			<groupId>jdistlib</groupId>
-			<artifactId>jdistlib</artifactId>
-			<version>0.4.5</version>
-		</dependency>
-
-		<!-- JUnit 5 for testing -->
-		<dependency>
-			<groupId>org.junit.jupiter</groupId>
-			<artifactId>junit-jupiter</artifactId>
-			<version>5.10.1</version>
-			<scope>test</scope>
-		</dependency>
-	</dependencies>
 </project>
