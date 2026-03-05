@@ -67,6 +67,12 @@ public class fitVlmc {
 	private static Integer pred_rest_port=null;
 	// Maximum navigation depth for ECF traversal (prevents infinite recursion in cyclic models)
 	public static int maxNavigationDepth = 25;
+	// CSV event log options
+	public static String csvCaseColumn = "case_id";
+	public static String csvActivityColumn = "activity";
+	public static String csvTimestampColumn = "timestamp";
+	public static String csvSeparator = ",";
+	private static boolean csvOptionsSet = false;
 
 	public static void main(String[] args) {
 		Locale.setDefault(new Locale("en", "US"));
@@ -145,50 +151,97 @@ public class fitVlmc {
 
 			if (fitVlmc.cmpLik != null) {
 
-				File ctxFile = new File(fitVlmc.cmpLik);
-				FileReader fr = null;
-				String ctxStr = null;
-				try {
-					fr = new FileReader(ctxFile);
-					BufferedReader br = new BufferedReader(fr);
-					ctxStr = br.readLine();
-				} catch (FileNotFoundException e1) {
-					e1.printStackTrace();
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
+				// Read traces - support both CSV and legacy format
 				ArrayList<ArrayList<String>> inCtx = new ArrayList<>();
-				String[] ctxs = ctxStr.toString().split("end\\$");
-				for (int i = 0; i < ctxs.length; i++) {
-					ArrayList<String> ctx = new ArrayList<>();
-					String[] pieces = (ctxs[i] + "end$").trim().split(" ");
-					for (int j = 0; j < pieces.length; j++) {
-						ctx.add(pieces[j]);
+				File ctxFile = new File(fitVlmc.cmpLik);
+
+				if (fitVlmc.isCsvOptionsSet() || CsvEventLogReader.isCsvFile(ctxFile)) {
+					// CSV event log format
+					CsvEventLogReader csvReader = new CsvEventLogReader(
+							fitVlmc.csvCaseColumn, fitVlmc.csvActivityColumn,
+							fitVlmc.csvTimestampColumn, fitVlmc.csvSeparator);
+					try {
+						inCtx = csvReader.readCsvAsTraces(ctxFile);
+						System.out.println("Loaded " + inCtx.size() + " traces from CSV for likelihood.");
+					} catch (IOException e) {
+						System.err.println("ERROR reading CSV for likelihood: " + e.getMessage());
+						e.printStackTrace();
+						System.exit(1);
 					}
-					inCtx.add(ctx);
+				} else {
+					// Legacy format: all on one line, traces separated by end$
+					try (BufferedReader br = new BufferedReader(new FileReader(ctxFile))) {
+						String ctxStr = br.readLine();
+						if (ctxStr != null) {
+							String[] ctxs = ctxStr.split("end\\$");
+							for (int i = 0; i < ctxs.length; i++) {
+								String trimmed = ctxs[i].trim();
+								if (trimmed.isEmpty()) continue;
+								ArrayList<String> ctx = new ArrayList<>();
+								String[] pieces = (trimmed + " end$").trim().split(" ");
+								for (int j = 0; j < pieces.length; j++) {
+									if (!pieces[j].isEmpty()) {
+										ctx.add(pieces[j]);
+									}
+								}
+								inCtx.add(ctx);
+							}
+						}
+					} catch (IOException e) {
+						System.err.println("ERROR reading likelihood file: " + e.getMessage());
+						e.printStackTrace();
+						System.exit(1);
+					}
 				}
 
-				String[] pathPicies = fitVlmc.vlmcFile.split("/");
-				File likFile = new File(pathPicies[pathPicies.length - 1] + ".lik");
-				FileWriter fw = null;
-				try {
-					fw = new FileWriter(likFile);
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
-				for (ArrayList<String> ctx : inCtx) {
-					ArrayList<Double> l = learner.vlmc.getLikelihood(ctx);
-					try {
-						fw.write(String.format("%f,%d\n", l.get(l.size() - 1), l.size()));
-					} catch (IOException e) {
-						e.printStackTrace();
+				// Compute likelihood and write output files
+				String baseName = Paths.get(fitVlmc.cmpLik).getFileName().toString().replaceAll("\\.[^.]+$", "");
+				File likFile = new File(baseName + ".lik");
+				File likPrefixFile = new File(baseName + ".lik.prefix");
+
+				double totalLogLikelihood = 0.0;
+				int validTraces = 0;
+
+				try (FileWriter fwLik = new FileWriter(likFile);
+				     FileWriter fwPrefix = new FileWriter(likPrefixFile)) {
+
+					// Headers
+					fwLik.write("trace_id,trace_length,likelihood,log_likelihood\n");
+					fwPrefix.write("trace_id,prefix_length,likelihood\n");
+
+					for (int t = 0; t < inCtx.size(); t++) {
+						ArrayList<String> ctx = inCtx.get(t);
+						ArrayList<Double> likValues = learner.vlmc.getLikelihood(ctx);
+
+						// Write per-prefix likelihood
+						for (int p = 0; p < likValues.size(); p++) {
+							fwPrefix.write(String.format("%d,%d,%e\n", t, p + 1, likValues.get(p)));
+						}
+
+						// Per-trace: final likelihood value
+						double finalLik = likValues.isEmpty() ? 0.0 : likValues.get(likValues.size() - 1);
+						double logLik = finalLik > 0 ? Math.log(finalLik) : Double.NEGATIVE_INFINITY;
+
+						fwLik.write(String.format("%d,%d,%e,%f\n", t, ctx.size(), finalLik, logLik));
+
+						if (finalLik > 0) {
+							totalLogLikelihood += logLik;
+							validTraces++;
+						}
 					}
-				}
-				try {
-					fw.close();
 				} catch (IOException e) {
+					System.err.println("ERROR writing likelihood output: " + e.getMessage());
 					e.printStackTrace();
 				}
+
+				// Aggregated output to stdout
+				System.out.println("=== LIKELIHOOD ANALYSIS ===");
+				System.out.println(String.format("Total traces: %d", inCtx.size()));
+				System.out.println(String.format("Traces with non-zero likelihood: %d", validTraces));
+				System.out.println(String.format("Aggregate log-likelihood: %f", totalLogLikelihood));
+				System.out.println(String.format("Per-trace output: %s", likFile.getAbsolutePath()));
+				System.out.println(String.format("Per-prefix output: %s", likPrefixFile.getAbsolutePath()));
+
 			} else if (fitVlmc.rnd) {
 				// genero una una nuova VLMC a partire dalla precedente sporcandone le
 				// probabilita'
@@ -284,6 +337,24 @@ public class fitVlmc {
 	public void readInputTraces() {
 		File inFile = new File(fitVlmc.inFile);
 
+		// Auto-detect CSV format
+		if (fitVlmc.isCsvOptionsSet() || CsvEventLogReader.isCsvFile(inFile)) {
+			System.out.println("Detected CSV event log format. Using CsvEventLogReader.");
+			CsvEventLogReader csvReader = new CsvEventLogReader(
+					fitVlmc.csvCaseColumn, fitVlmc.csvActivityColumn,
+					fitVlmc.csvTimestampColumn, fitVlmc.csvSeparator);
+			try {
+				this.content = csvReader.readCsv(inFile);
+				System.out.println("CSV parsed successfully. Trace content length: " + this.content.length());
+			} catch (IOException e) {
+				System.err.println("ERROR reading CSV file: " + e.getMessage());
+				e.printStackTrace();
+				System.exit(1);
+			}
+			return;
+		}
+
+		// Legacy format: raw text with spaces and end$
 		BufferedReader in = null;
 		try {
 			in = new BufferedReader(new InputStreamReader(new FileInputStream(inFile), "UTF8"));
@@ -294,21 +365,16 @@ public class fitVlmc {
 		}
 
 		String str = null;
-		String contentStr = "";
+		StringBuilder contentStr = new StringBuilder();
 		try {
 			while ((str = in.readLine()) != null) {
-				contentStr += str;
+				contentStr.append(str);
 			}
 			in.close();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-		this.content = contentStr;
-//		this.content=new ArrayList<String>();
-//		String[] trace= contentStr.split(" ");
-//		for (String state : trace) {
-//			content.add(state);
-//		}
+		this.content = contentStr.toString();
 	}
 
 	public void createSuffixArray() {
@@ -449,6 +515,12 @@ public class fitVlmc {
 		System.out.println("    --ecfoutfile <file>   Save auto-generated ECF model to file");
 		System.out.println("    --outfile <file>      Output file for generated traces");
 		System.out.println();
+		System.out.println("  CSV Event Log Options:");
+		System.out.println("    --csv-case <name>     CSV column name for case identifier (default: case_id)");
+		System.out.println("    --csv-activity <name> CSV column name for activity (default: activity)");
+		System.out.println("    --csv-timestamp <name> CSV column name for timestamp (default: timestamp)");
+		System.out.println("    --csv-separator <char> CSV field separator (default: ,)");
+		System.out.println();
 		System.out.println("  Advanced Options:");
 		System.out.println("    --vlmc <file>         Load pre-computed VLMC model instead of learning");
 		System.out.println("    --ntime <int>         Time parameter for processing");
@@ -501,7 +573,7 @@ public class fitVlmc {
 		}
 
 		int c;
-		LongOpt[] longopts = new LongOpt[16];
+		LongOpt[] longopts = new LongOpt[20];
 		longopts[0] = new LongOpt("ecf", LongOpt.REQUIRED_ARGUMENT, null, 0);
 		longopts[1] = new LongOpt("outfile", LongOpt.REQUIRED_ARGUMENT, null, 1);
 		longopts[2] = new LongOpt("infile", LongOpt.REQUIRED_ARGUMENT, null, 2);
@@ -526,6 +598,11 @@ public class fitVlmc {
 		// Maximum navigation depth for cyclic ECF models
 		longopts[14] = new LongOpt("maxdepth", LongOpt.REQUIRED_ARGUMENT, null, 14);
 		longopts[15] = new LongOpt("ecfoutfile", LongOpt.REQUIRED_ARGUMENT, null, 15);
+		// CSV event log options
+		longopts[16] = new LongOpt("csv-case", LongOpt.REQUIRED_ARGUMENT, null, 16);
+		longopts[17] = new LongOpt("csv-activity", LongOpt.REQUIRED_ARGUMENT, null, 17);
+		longopts[18] = new LongOpt("csv-timestamp", LongOpt.REQUIRED_ARGUMENT, null, 18);
+		longopts[19] = new LongOpt("csv-separator", LongOpt.REQUIRED_ARGUMENT, null, 19);
 
 		Getopt g = new Getopt("fitVlmc", args, "h", longopts);
 		g.setOpterr(true);
@@ -581,6 +658,22 @@ public class fitVlmc {
 				break;
 			case 15:
 				fitVlmc.ecfOutFile = g.getOptarg();
+				break;
+			case 16:
+				fitVlmc.csvCaseColumn = g.getOptarg();
+				fitVlmc.csvOptionsSet = true;
+				break;
+			case 17:
+				fitVlmc.csvActivityColumn = g.getOptarg();
+				fitVlmc.csvOptionsSet = true;
+				break;
+			case 18:
+				fitVlmc.csvTimestampColumn = g.getOptarg();
+				fitVlmc.csvOptionsSet = true;
+				break;
+			case 19:
+				fitVlmc.csvSeparator = g.getOptarg();
+				fitVlmc.csvOptionsSet = true;
 				break;
 			default:
 				System.err.println("Unknown option. Use --help for usage information.");
@@ -661,6 +754,10 @@ public class fitVlmc {
 
 	public SuffixArray getSa() {
 		return sa;
+	}
+
+	public static boolean isCsvOptionsSet() {
+		return csvOptionsSet;
 	}
 
 }
