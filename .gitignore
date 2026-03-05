@@ -49,6 +49,10 @@ dist/
 *.mat
 *.vlmc
 *.dcdt
+*.lik
+*.lik.prefix
+*.lik.csv
+*.lik.prefix.csv
 
 # Eclipse/PyDev
 .pydevproject

@@ -93,7 +93,10 @@ public class EndToEndTest {
 		File vlmcFile = new File(tempDir, "model.vlmc");
 		File outFile = new File(tempDir, "sim_output.mat");
 
-		// Step 1: Fitting with alfa=1 (no pruning), nsim=1
+		// Step 1: Fitting with very low alfa (no pruning), ntime=1, nsim=1
+		// NOTE: alfa is the significance level for the chi-square pruning test.
+		// Low alfa → small cutoff → KL*n rarely below cutoff → no pruning.
+		// High alfa (e.g. 1) → cutoff=Infinity → prunes everything.
 		String fitOutput = runJar(
 			"--infile", csv.getAbsolutePath(),
 			"--csv-case", "case_id",
@@ -101,7 +104,8 @@ public class EndToEndTest {
 			"--csv-timestamp", "timestamp",
 			"--vlmcfile", vlmcFile.getAbsolutePath(),
 			"--outfile", outFile.getAbsolutePath(),
-			"--alfa", "1",
+			"--alfa", "0.001",
+			"--ntime", "1",
 			"--nsim", "1"
 		);
 
@@ -127,15 +131,14 @@ public class EndToEndTest {
 		double uemsc = Double.parseDouble(m.group(1));
 		assertTrue(uemsc >= 0.0 && uemsc <= 1.0, "uEMSC should be in [0,1], got: " + uemsc);
 
-		// With alfa=1 (no pruning) and training=test, uEMSC should be very close to 1
-		if (uemsc < 0.99) {
-			// Print diagnostic info for debugging
-			System.err.println("=== DIAGNOSTIC: uEMSC < 0.99 ===");
+		// With no pruning (low alfa) and training=test, uEMSC must be very close to 1
+		if (uemsc < 0.999) {
+			System.err.println("=== DIAGNOSTIC: uEMSC < 0.999 ===");
 			System.err.println("uEMSC = " + uemsc);
 			System.err.println("Fit output:\n" + fitOutput);
 			System.err.println("Lik output:\n" + likOutput);
 		}
-		assertTrue(uemsc >= 0.90,
-			"uEMSC should be >= 0.90 with alfa=1 and training=test, got: " + uemsc);
+		assertTrue(uemsc >= 0.999,
+			"uEMSC should be >= 0.999 with no pruning and training=test, got: " + uemsc);
 	}
 }
