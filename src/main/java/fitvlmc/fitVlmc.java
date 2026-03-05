@@ -80,7 +80,11 @@ public class fitVlmc {
 		learner.getCliOptions(args);
 
 		// NEW: Support automatic ECF generation from traces
-		if (fitVlmc.ecfModelPath == null) {
+		// Skip ECF generation entirely when in likelihood-only mode (--vlmc + --lik, no --infile)
+		boolean likelihoodOnly = fitVlmc.vlmcFile != null && fitVlmc.cmpLik != null && fitVlmc.inFile == null;
+		if (likelihoodOnly) {
+			// No ECF needed — will load VLMC directly in the vlmcFile branch below
+		} else if (fitVlmc.ecfModelPath == null) {
 			System.out.println("No ECF model provided. Will generate ECF automatically from input traces.");
 			learner.readInputTraces(); // Need to read traces first for auto-generation
 			learner.generateEcfFromTraces();
@@ -89,9 +93,11 @@ public class fitVlmc {
 		}
 
 		// compute the pruning as a quantile of the chi square distribution
-		// Skip cutoff calculation in prediction mode with pre-trained model
+		// Skip cutoff calculation in prediction/likelihood-only mode with pre-trained model
 		boolean isPredictionMode = fitVlmc.pred || fitVlmc.pred_rest_port != null;
-		if (!isPredictionMode || fitVlmc.alfa != null) {
+		if (likelihoodOnly) {
+			fitVlmc.cutoff = 0.0;
+		} else if (!isPredictionMode || fitVlmc.alfa != null) {
 			fitVlmc.cutoff = jdistlib.ChiSquare.quantile(fitVlmc.alfa,
 					Math.max(0.1, learner.ecfModel.getEdges().size() - 1), false, false) / 2;
 		} else {
@@ -241,6 +247,7 @@ public class fitVlmc {
 				System.out.println(String.format("Aggregate log-likelihood: %f", totalLogLikelihood));
 				System.out.println(String.format("Per-trace output: %s", likFile.getAbsolutePath()));
 				System.out.println(String.format("Per-prefix output: %s", likPrefixFile.getAbsolutePath()));
+				return; // Likelihood-only mode — done
 
 			} else if (fitVlmc.rnd) {
 				// genero una una nuova VLMC a partire dalla precedente sporcandone le

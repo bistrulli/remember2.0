@@ -33,7 +33,11 @@ public class Trace2EcfIntegrator {
                     e = new Edge(String.valueOf(s));
                     if (s.split("_").length > 1) {
                         String[] p = s.split("_");
-                        e.setCost(Integer.valueOf(p[p.length - 1]));
+                        try {
+                            e.setCost(Integer.valueOf(p[p.length - 1]));
+                        } catch (NumberFormatException excep) {
+                            // Non-numeric suffix (e.g. activity names) — cost stays 0
+                        }
                     }
                     ecfModel.addEdge(e);
                 }
