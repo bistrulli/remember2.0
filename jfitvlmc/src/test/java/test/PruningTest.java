@@ -107,7 +107,7 @@ public class PruningTest {
 		parent.setDist(makeDist(new String[]{"A"}, new double[]{1.0}, 10));
 		parent.setParent(root);
 
-		// Child has A and B
+		// Child has A and B — B is absent in parent with pChild=0.3 > 0
 		VlmcNode child = new VlmcNode();
 		child.setLabel("child");
 		child.setDist(makeDist(new String[]{"A", "B"}, new double[]{0.7, 0.3}, 10));
@@ -115,7 +115,7 @@ public class PruningTest {
 
 		double kl = child.KullbackLeibler();
 		assertFalse(Double.isNaN(kl), "KL should not be NaN when parent lacks symbol");
-		assertFalse(Double.isInfinite(kl), "KL should not be Infinite when parent lacks symbol");
+		assertTrue(Double.isInfinite(kl) && kl > 0, "KL should be +Infinity when child has symbol absent in parent");
 	}
 
 	@Test

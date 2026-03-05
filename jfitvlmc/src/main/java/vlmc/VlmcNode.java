@@ -145,8 +145,11 @@ public class VlmcNode implements Cloneable {
 		for (String symbol : this.getDist().symbols) {
 			Double pChild = this.dist.getProbBySymbol(symbol);
 			Double pParent = this.getParent().getDist().getProbBySymbol(symbol);
-			if (pChild == null || pChild == 0 || pParent == null || pParent == 0) {
+			if (pChild == null || Math.abs(pChild) < 1e-15) {
 				continue;
+			}
+			if (pParent == null || Math.abs(pParent) < 1e-15) {
+				return Double.POSITIVE_INFINITY;
 			}
 			KullbackLeibler += pChild * Math.log(pChild / pParent);
 		}
