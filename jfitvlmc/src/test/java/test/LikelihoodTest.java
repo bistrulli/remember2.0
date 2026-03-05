@@ -146,4 +146,38 @@ public class LikelihoodTest {
 
 		assertTrue(lik.isEmpty());
 	}
+
+	@Test
+	public void testGetState_deepContext() {
+		// getState with context [A, B] should look for B first, then A under B
+		ArrayList<String> ctx = new ArrayList<>(Arrays.asList("A", "B"));
+		VlmcNode state = vlmc.getState(ctx);
+		assertNotNull(state);
+		// Should find B at root level (no A child under B)
+		assertEquals("B", state.getLabel());
+	}
+
+	@Test
+	public void testGetState_unknownSymbol() {
+		// Unknown symbol should return root
+		ArrayList<String> ctx = new ArrayList<>(Arrays.asList("X"));
+		VlmcNode state = vlmc.getState(ctx);
+		assertEquals("root", state.getLabel());
+	}
+
+	@Test
+	public void testDFS_visitsAllNodes() {
+		// DFS should visit both A and B
+		ArrayList<String> visited = new ArrayList<>();
+		vlmc.DFS(node -> visited.add(node.getLabel()));
+		assertTrue(visited.contains("A"));
+		assertTrue(visited.contains("B"));
+		assertEquals(2, visited.size());
+	}
+
+	@Test
+	public void testComputeOrder() {
+		vlmc.computeOrder(0);
+		assertTrue(VlmcRoot.order >= 0);
+	}
 }
