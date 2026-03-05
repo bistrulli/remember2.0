@@ -398,9 +398,8 @@ public class fitVlmc {
 		if (fitVlmc.outFile != null) {
 			outFile = new File(fitVlmc.outFile);
 		} else {
-			String[] pieces = fitVlmc.vlmcOutFile.split("/");
-			pieces = pieces[pieces.length - 1].split(".vlmc");
-			outFile = new File(pieces[0] + ".dcdt");
+			String baseName = Paths.get(fitVlmc.vlmcOutFile).getFileName().toString().replaceAll("\\.vlmc$", "");
+			outFile = new File(baseName + ".dcdt");
 		}
 		fitVlmc.saveTraces(traces, outFile);
 	}
