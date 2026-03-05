@@ -53,6 +53,7 @@ public class fitVlmc {
 	private Flow ecfModel = null;
 	private String content = null;
 	private SuffixArray sa = null;
+	private static final Random RNG = new Random();
 	public static double cutoff = -1;
 	VlmcRoot vlmc = null;
 
@@ -326,9 +327,8 @@ public class fitVlmc {
 						a.add(0d);
 					}
 					double s = 0.0d;
-					Random random = new Random();
 					for (int i = 0; i < n; i++) {
-						a.set(i, 1.0d - random.nextDouble());
+						a.set(i, 1.0d - RNG.nextDouble());
 						a.set(i, -1 * Math.log(a.get(i)));
 						s += a.get(i);
 					}

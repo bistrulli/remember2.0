@@ -60,6 +60,7 @@ import java.util.Random;
  * <i>Algorithms, 4th Edition</i> by Robert Sedgewick and Kevin Wayne.
  */
 public class SuffixArray {
+	private static final Random SHUFFLE_RNG = new Random();
 	private Suffix[] suffixes;
 	private int[] LCP;
 
@@ -75,10 +76,8 @@ public class SuffixArray {
 			suffixes[i] = new Suffix(text, i);
 		
 		//shuffle array
-		Random rand = new Random();
-		
 		for (int i = 0; i < suffixes.length; i++) {
-			int randomIndexToSwap = rand.nextInt(suffixes.length);
+			int randomIndexToSwap = SHUFFLE_RNG.nextInt(suffixes.length);
 			Suffix temp = suffixes[randomIndexToSwap];
 			suffixes[randomIndexToSwap] = suffixes[i];
 			suffixes[i] = temp;
