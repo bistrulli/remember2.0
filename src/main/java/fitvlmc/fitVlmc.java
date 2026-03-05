@@ -290,6 +290,24 @@ public class fitVlmc {
 	public void readInputTraces() {
 		File inFile = new File(fitVlmc.inFile);
 
+		// Auto-detect CSV format
+		if (fitVlmc.isCsvOptionsSet() || CsvEventLogReader.isCsvFile(inFile)) {
+			System.out.println("Detected CSV event log format. Using CsvEventLogReader.");
+			CsvEventLogReader csvReader = new CsvEventLogReader(
+					fitVlmc.csvCaseColumn, fitVlmc.csvActivityColumn,
+					fitVlmc.csvTimestampColumn, fitVlmc.csvSeparator);
+			try {
+				this.content = csvReader.readCsv(inFile);
+				System.out.println("CSV parsed successfully. Trace content length: " + this.content.length());
+			} catch (IOException e) {
+				System.err.println("ERROR reading CSV file: " + e.getMessage());
+				e.printStackTrace();
+				System.exit(1);
+			}
+			return;
+		}
+
+		// Legacy format: raw text with spaces and end$
 		BufferedReader in = null;
 		try {
 			in = new BufferedReader(new InputStreamReader(new FileInputStream(inFile), "UTF8"));
@@ -300,21 +318,16 @@ public class fitVlmc {
 		}
 
 		String str = null;
-		String contentStr = "";
+		StringBuilder contentStr = new StringBuilder();
 		try {
 			while ((str = in.readLine()) != null) {
-				contentStr += str;
+				contentStr.append(str);
 			}
 			in.close();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-		this.content = contentStr;
-//		this.content=new ArrayList<String>();
-//		String[] trace= contentStr.split(" ");
-//		for (String state : trace) {
-//			content.add(state);
-//		}
+		this.content = contentStr.toString();
 	}
 
 	public void createSuffixArray() {
