@@ -2,7 +2,7 @@
 
 ## Panoramica
 
-**jfitVLMC** (REMEMBER) e' un'implementazione Java di algoritmi di apprendimento per Variable Length Markov Chain (VLMC). Apprende modelli di Markov adattivi da tracce di esecuzione, supporta simulazione, predizione e generazione automatica di modelli ECF.
+**jfitVLMC** (REMEMBER) e' un'implementazione Java di algoritmi di apprendimento per Variable Length Markov Chain (VLMC). Apprende modelli di Markov adattivi da tracce di esecuzione (formato interno o CSV event log), supporta simulazione, predizione, likelihood analysis con uEMSC (stochastic conformance checking) e generazione automatica di modelli ECF.
 
 ## Java Environment (CRITICAL)
 
@@ -37,7 +37,7 @@ mvn clean package
 
 Il progetto dipende dal modulo ECF (`it.sysma.vlmc:ecf:1.0.0-SNAPSHOT`), un progetto separato che fornisce le classi per Electronic Control Flow. Questa dipendenza:
 - **NON e' su Maven Central** — deve essere installata nel repository Maven locale
-- Si trova tipicamente in `/lightWeightMB/` o in un percorso locale
+- Si trova tipicamente in `/Users/emilio-imt/Desktop/vlmc/ECF/`
 - Per installarla: `cd <ecf-project-dir> && mvn install`
 - Se la build fallisce con "Could not resolve dependencies... ecf", la dipendenza ECF non e' installata
 
@@ -52,6 +52,7 @@ jfitVLMC/
 │   │   │   ├── fitVlmc.java              # Main entry point (CLI + learning)
 │   │   │   ├── EcfNavigator.java         # ECF traversal, VLMC tree construction
 │   │   │   ├── Trace2EcfIntegrator.java  # Auto ECF generation from traces
+│   │   │   ├── CsvEventLogReader.java    # CSV event log parser (process mining format)
 │   │   │   ├── RESTVlmc.java             # HTTP handler for prediction API (GET /?ctx=)
 │   │   │   ├── GenerateEcfToFile.java    # ECF file output utility (standalone main)
 │   │   │   ├── SelfLoopRemover.java      # Self-loop removal from ECF graphs (standalone main)
@@ -69,7 +70,9 @@ jfitVLMC/
 │   │       └── SuffixArrayInt.java       # Integer variant with LCP support
 │   └── test/java/test/
 │       ├── SaTest.java                   # Suffix array test (hardcoded path)
-│       └── SaTestInt.java                # Integer suffix array test
+│       ├── SaTestInt.java                # Integer suffix array test
+│       ├── CsvEventLogReaderTest.java    # JUnit 5: CSV parsing, ordering, separators (10 test)
+│       └── LikelihoodTest.java           # JUnit 5: likelihood computation on hand-built VLMC (7 test)
 ├── pom.xml                               # Maven build config
 ├── plan/                                 # Piani di implementazione
 ├── .github/
@@ -97,9 +100,10 @@ jfitVLMC/
 
 | Classe | Package | Responsabilita |
 |--------|---------|---------------|
-| `fitVlmc` | `fitvlmc` | Entry point CLI (16 opzioni), modalita learning/prediction/REST, validazione parametri |
+| `fitVlmc` | `fitvlmc` | Entry point CLI (20 opzioni), modalita learning/prediction/REST/likelihood |
 | `EcfNavigator` | `fitvlmc` | Navigazione ECF, costruzione albero VLMC, pruning statistico (chi-square) |
 | `Trace2EcfIntegrator` | `fitvlmc` | Generazione automatica ECF `Flow` da tracce raw (split su spazi, reset su `end$`) |
+| `CsvEventLogReader` | `fitvlmc` | Parser CSV event log (case_id, activity, timestamp). Auto-detection formato. |
 | `RESTVlmc` | `fitvlmc` | HTTP handler: `GET /?ctx=state1-state2-state3` ritorna distribuzione next symbol |
 | `GenerateEcfToFile` | `fitvlmc` | Utility standalone: genera ECF da file tracce e salva su file |
 | `SelfLoopRemover` | `fitvlmc` | Utility standalone: rimuove self-loop (A->A) da ECF, preserva cicli (A->B->A) |
@@ -128,25 +132,32 @@ Alias: `java -jar target/jfitvlmc-1.0.0-SNAPSHOT-jar-with-dependencies.jar`
 | `--alfa <float>` | REQUIRED_ARG | Alpha per pruning statistico (richiesto per learning) |
 | `--vlmc <file>` | REQUIRED_ARG | Carica modello VLMC pre-addestrato |
 | `--initCtx <ctx>` | REQUIRED_ARG | Contesto iniziale per predizione (separato da spazi) |
-| `--lik <file>` | REQUIRED_ARG | Calcola likelihood per contesti nel file |
+| `--lik <file>` | REQUIRED_ARG | Calcola likelihood + uEMSC per tracce nel file |
 | `--rnd` | NO_ARG | Genera VLMC randomizzata da modello esistente |
 | `--pred` | NO_ARG | Modalita predizione (richiede `--initCtx`) |
 | `--pred_rest <port>` | REQUIRED_ARG | Avvia REST API su porta specificata (1-65535) |
 | `--maxdepth <int>` | REQUIRED_ARG | Profondita max navigazione ECF (default: 25) |
 | `--ecfoutfile <file>` | REQUIRED_ARG | Salva ECF auto-generato su file |
+| `--csv-case <name>` | REQUIRED_ARG | Colonna case identifier nel CSV (default: `case_id`) |
+| `--csv-activity <name>` | REQUIRED_ARG | Colonna activity nel CSV (default: `activity`) |
+| `--csv-timestamp <name>` | REQUIRED_ARG | Colonna timestamp nel CSV (default: `timestamp`) |
+| `--csv-separator <char>` | REQUIRED_ARG | Separatore campi CSV (default: `,`) |
 | `-h, --help` | NO_ARG | Mostra help |
 
 ### Esempi
 
 ```bash
-# Learning con auto-generazione ECF
+# Learning da formato interno
 java -jar <JAR> --infile traces.txt --vlmcfile model.vlmc --alfa 0.05 --nsim 1000
 
-# Learning con ECF e salvataggio ECF generato
-java -jar <JAR> --infile traces.txt --vlmcfile model.vlmc --ecfoutfile model.ecf --alfa 0.05 --nsim 1000
+# Learning da CSV event log
+java -jar <JAR> --infile data.csv --csv-case idars --csv-activity activity \
+  --csv-timestamp timestamp --vlmcfile model.vlmc --alfa 0.05 --nsim 1
 
-# Learning con ECF esistente
-java -jar <JAR> --ecf workflow.ecf --infile traces.txt --vlmcfile model.vlmc --alfa 0.01
+# Likelihood + uEMSC (stochastic conformance)
+java -jar <JAR> --vlmc model.vlmc --lik data.csv --csv-case idars \
+  --csv-activity activity --csv-timestamp timestamp
+# Output: .lik (per-trace), .lik.prefix (per-prefix con contesto), stdout (aggregati + uEMSC)
 
 # Predizione singola
 java -jar <JAR> --vlmc model.vlmc --pred --initCtx "state1 state2"
@@ -154,10 +165,25 @@ java -jar <JAR> --vlmc model.vlmc --pred --initCtx "state1 state2"
 # REST server
 java -jar <JAR> --vlmc model.vlmc --pred_rest 8080
 # Query: GET http://localhost:8080/?ctx=state1-state2-state3
-
-# Likelihood analysis
-java -jar <JAR> --vlmc model.vlmc --lik contexts.txt
 ```
+
+### Output `--lik`
+
+Il comando `--lik` produce tre output:
+
+1. **`<basename>.lik`** — per-trace CSV: `trace_id,trace_length,likelihood,log_likelihood`
+2. **`<basename>.lik.prefix`** — per-prefix CSV: `trace_id,prefix_length,likelihood,prefix,next_activity,possible_activities`
+3. **stdout** — statistiche aggregate:
+   ```
+   === LIKELIHOOD ANALYSIS ===
+   Total traces: N
+   Traces with non-zero likelihood: N
+   Aggregate log-likelihood: -X.XX
+   Distinct traces: N
+   uEMSC (stochastic conformance): 0.XXXX
+   ```
+
+La **uEMSC** (unit Earth Mover's Stochastic Conformance, Leemans et al. BPM 2019) misura la conformance tra il linguaggio stocastico del log e quello del modello VLMC. Valore in [0, 1]: 1 = conformance perfetta.
 
 ## Convenzioni Codice
 
@@ -170,6 +196,7 @@ java -jar <JAR> --vlmc model.vlmc --lik contexts.txt
 - **Parsing**: ANTLR 4.7.2 runtime per parsing ECF
 - **Utilities**: Apache Commons Lang 3.12.0 per StringUtils/ArrayUtils, jfiglet 0.0.9 per banner ASCII
 - **HTTP**: `com.sun.net.httpserver` (JDK built-in) per REST API
+- **Testing**: JUnit Jupiter 5.10.1 + maven-surefire-plugin 3.2.2
 
 ## Git Workflow
 

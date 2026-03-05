@@ -12,7 +12,9 @@ import java.io.UnsupportedEncodingException;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Random;
 
 import org.antlr.v4.runtime.BaseErrorListener;
@@ -30,6 +32,7 @@ import antlr.ECFLexer;
 import antlr.ECFParser;
 import gnu.getopt.Getopt;
 import gnu.getopt.LongOpt;
+import vlmc.NextSymbolsDistribution;
 import vlmc.VlmcNode;
 import vlmc.VlmcRoot;
 import com.sun.net.httpserver.HttpServer;
@@ -80,7 +83,11 @@ public class fitVlmc {
 		learner.getCliOptions(args);
 
 		// NEW: Support automatic ECF generation from traces
-		if (fitVlmc.ecfModelPath == null) {
+		// Skip ECF generation entirely when in likelihood-only mode (--vlmc + --lik, no --infile)
+		boolean likelihoodOnly = fitVlmc.vlmcFile != null && fitVlmc.cmpLik != null && fitVlmc.inFile == null;
+		if (likelihoodOnly) {
+			// No ECF needed — will load VLMC directly in the vlmcFile branch below
+		} else if (fitVlmc.ecfModelPath == null) {
 			System.out.println("No ECF model provided. Will generate ECF automatically from input traces.");
 			learner.readInputTraces(); // Need to read traces first for auto-generation
 			learner.generateEcfFromTraces();
@@ -89,9 +96,11 @@ public class fitVlmc {
 		}
 
 		// compute the pruning as a quantile of the chi square distribution
-		// Skip cutoff calculation in prediction mode with pre-trained model
+		// Skip cutoff calculation in prediction/likelihood-only mode with pre-trained model
 		boolean isPredictionMode = fitVlmc.pred || fitVlmc.pred_rest_port != null;
-		if (!isPredictionMode || fitVlmc.alfa != null) {
+		if (likelihoodOnly) {
+			fitVlmc.cutoff = 0.0;
+		} else if (!isPredictionMode || fitVlmc.alfa != null) {
 			fitVlmc.cutoff = jdistlib.ChiSquare.quantile(fitVlmc.alfa,
 					Math.max(0.1, learner.ecfModel.getEdges().size() - 1), false, false) / 2;
 		} else {
@@ -207,15 +216,44 @@ public class fitVlmc {
 
 					// Headers
 					fwLik.write("trace_id,trace_length,likelihood,log_likelihood\n");
-					fwPrefix.write("trace_id,prefix_length,likelihood\n");
+					fwPrefix.write("trace_id,prefix_length,likelihood,prefix,next_activity,possible_activities\n");
 
 					for (int t = 0; t < inCtx.size(); t++) {
 						ArrayList<String> ctx = inCtx.get(t);
 						ArrayList<Double> likValues = learner.vlmc.getLikelihood(ctx);
 
-						// Write per-prefix likelihood
+						// Write per-prefix likelihood with context details
+						// Replicate VLMC navigation to access node distributions
+						ArrayList<String> tmpCtx = new ArrayList<>(Arrays.asList(ctx.get(0)));
+						VlmcNode state = learner.vlmc.getState(tmpCtx);
 						for (int p = 0; p < likValues.size(); p++) {
-							fwPrefix.write(String.format("%d,%d,%e\n", t, p + 1, likValues.get(p)));
+							// Build prefix string (activities 0..p)
+							StringBuilder prefixSb = new StringBuilder();
+							for (int k = 0; k <= p; k++) {
+								if (k > 0) prefixSb.append(" ");
+								prefixSb.append(ctx.get(k));
+							}
+
+							// Next activity that determines this prefix's likelihood
+							String nextActivity = ctx.get(p + 1);
+
+							// Possible activities with P > 0 from current state
+							StringBuilder possibleSb = new StringBuilder();
+							NextSymbolsDistribution dist = state.getDist();
+							for (int s = 0; s < dist.getSymbols().size(); s++) {
+								if (possibleSb.length() > 0) possibleSb.append(";");
+								possibleSb.append(dist.getSymbols().get(s));
+								possibleSb.append(":");
+								possibleSb.append(String.format("%.4f", dist.getProbability().get(s)));
+							}
+
+							fwPrefix.write(String.format("%d,%d,%e,%s,%s,%s\n",
+									t, p + 1, likValues.get(p),
+									prefixSb.toString(), nextActivity, possibleSb.toString()));
+
+							// Advance navigation (same logic as getLikelihood)
+							tmpCtx.add(ctx.get(p + 1));
+							state = learner.vlmc.getState(tmpCtx);
 						}
 
 						// Per-trace: final likelihood value
@@ -234,13 +272,44 @@ public class fitVlmc {
 					e.printStackTrace();
 				}
 
+				// Compute uEMSC (unit Earth Mover's Stochastic Conformance)
+				// Group traces by content to get empirical frequencies L(t)
+				HashMap<String, Integer> traceCounts = new HashMap<>();
+				for (ArrayList<String> ctx : inCtx) {
+					String key = String.join(" ", ctx);
+					traceCounts.merge(key, 1, Integer::sum);
+				}
+				int totalTraces = inCtx.size();
+				int distinctTraces = traceCounts.size();
+
+				// For each distinct trace, compute L(t) and M(t), then surplus
+				double surplus = 0.0;
+				for (Map.Entry<String, Integer> entry : traceCounts.entrySet()) {
+					double lt = (double) entry.getValue() / totalTraces;
+
+					// Parse trace back and compute M(t)
+					String[] parts = entry.getKey().split(" ");
+					ArrayList<String> traceList = new ArrayList<>(Arrays.asList(parts));
+					ArrayList<Double> likValues = learner.vlmc.getLikelihood(traceList);
+					double mt = likValues.isEmpty() ? 0.0 : likValues.get(likValues.size() - 1);
+
+					double diff = lt - mt;
+					if (diff > 0) {
+						surplus += diff;
+					}
+				}
+				double uemsc = 1.0 - surplus;
+
 				// Aggregated output to stdout
 				System.out.println("=== LIKELIHOOD ANALYSIS ===");
 				System.out.println(String.format("Total traces: %d", inCtx.size()));
 				System.out.println(String.format("Traces with non-zero likelihood: %d", validTraces));
 				System.out.println(String.format("Aggregate log-likelihood: %f", totalLogLikelihood));
+				System.out.println(String.format("Distinct traces: %d", distinctTraces));
+				System.out.println(String.format("uEMSC (stochastic conformance): %f", uemsc));
 				System.out.println(String.format("Per-trace output: %s", likFile.getAbsolutePath()));
 				System.out.println(String.format("Per-prefix output: %s", likPrefixFile.getAbsolutePath()));
+				return; // Likelihood-only mode — done
 
 			} else if (fitVlmc.rnd) {
 				// genero una una nuova VLMC a partire dalla precedente sporcandone le
