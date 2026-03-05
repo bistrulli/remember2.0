@@ -206,8 +206,11 @@ public class VlmcRoot extends VlmcNode {
 		ArrayList<String> tmpCtx = new ArrayList<String>(Arrays.asList(ctx.get(0)));
 		VlmcNode state = this.getState(tmpCtx);
 		for (int i = 0; i < ctx.size() - 1; i++) {
-			// get the new state and compute the probability of the context;
-			//System.out.println(String.format("ctx:%s symbol:%s", tmpCtx, ctx.get(i + 1)));
+			if (state.getDist() == null) {
+				p = 0;
+				lik.add(p);
+				break;
+			}
 			dist = state.getDist().getProbBySymbol(String.valueOf(ctx.get(i + 1)));
 			if (dist != null) {
 				p = p * state.getDist().getProbBySymbol(String.valueOf(ctx.get(i + 1)));
