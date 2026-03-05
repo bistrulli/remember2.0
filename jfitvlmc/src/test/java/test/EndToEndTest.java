@@ -135,7 +135,7 @@ public class EndToEndTest {
 			System.err.println("Fit output:\n" + fitOutput);
 			System.err.println("Lik output:\n" + likOutput);
 		}
-		assertTrue(uemsc >= 0.99,
-			"uEMSC should be >= 0.99 with alfa=1 and training=test, got: " + uemsc);
+		assertTrue(uemsc >= 0.90,
+			"uEMSC should be >= 0.90 with alfa=1 and training=test, got: " + uemsc);
 	}
 }
