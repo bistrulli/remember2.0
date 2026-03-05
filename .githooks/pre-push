@@ -1,0 +1,23 @@
+#!/bin/bash
+# Pre-push hook: enforce branch naming convention
+# Install: git config core.hooksPath .githooks
+
+BRANCH=$(git rev-parse --abbrev-ref HEAD)
+REGEX='^(feat|fix|hotfix|chore|release|main|master)(/[a-z0-9._-]+)?$'
+
+if [[ ! "$BRANCH" =~ $REGEX ]]; then
+    echo "ERROR: Branch name '$BRANCH' does not follow naming convention."
+    echo ""
+    echo "  Allowed patterns:"
+    echo "    feat/<description>"
+    echo "    fix/<description>"
+    echo "    hotfix/<description>"
+    echo "    chore/<description>"
+    echo "    release/<description>"
+    echo "    main, master"
+    echo ""
+    echo "  Description: lowercase, numbers, dots, hyphens, underscores only."
+    echo ""
+    echo "  Example: feat/add-prediction-cache"
+    exit 1
+fi
