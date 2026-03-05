@@ -1,23 +1,24 @@
 package fitvlmc;
 
-import java.io.IOException;
+import ECFEntity.Edge;
+import ECFEntity.Flow;
 import java.io.FileWriter;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import ECFEntity.Flow;
-import ECFEntity.Edge;
 import java.util.ArrayList;
 
 /**
- * Utility to remove ONLY self-loops (A → A) from generated ECF files
- * Keeps all other connections intact including direct cycles (A → B → A)
+ * Utility to remove ONLY self-loops (A → A) from generated ECF files Keeps all other connections
+ * intact including direct cycles (A → B → A)
  */
 public class SelfLoopRemover {
 
     public static void main(String[] args) {
         if (args.length < 3) {
-            System.err.println("Usage: java fitvlmc.SelfLoopRemover <input_training_file> <original_ecf> <cleaned_ecf>");
+            System.err.println(
+                    "Usage: java fitvlmc.SelfLoopRemover <input_training_file> <original_ecf> <cleaned_ecf>");
             System.exit(1);
         }
 
@@ -59,7 +60,8 @@ public class SelfLoopRemover {
             System.out.println("Cleaned edges: " + cleanedModel.getEdges().size());
             System.out.println("Original connections: " + originalConnections);
             System.out.println("Cleaned connections: " + cleanedConnections);
-            System.out.println("Connections removed: " + (originalConnections - cleanedConnections));
+            System.out.println(
+                    "Connections removed: " + (originalConnections - cleanedConnections));
 
         } catch (IOException e) {
             System.err.println("Failed to read input file: " + e.getMessage());
@@ -72,8 +74,8 @@ public class SelfLoopRemover {
     }
 
     /**
-     * Remove ONLY self-loops (A → A) from ECF model
-     * Preserves all other connections including A → B → A cycles
+     * Remove ONLY self-loops (A → A) from ECF model Preserves all other connections including A → B
+     * → A cycles
      */
     private static Flow removeSelfLoops(Flow originalModel) {
         System.out.println("\n🔄 Removing self-loops...");
@@ -102,7 +104,8 @@ public class SelfLoopRemover {
                 if (outEdgeLabel.equals(edgeLabel)) {
                     // This is a self-loop (A → A) - SKIP it
                     selfLoopsRemoved++;
-                    System.out.println("  ❌ Removed self-loop: " + edgeLabel + " → " + outEdgeLabel);
+                    System.out.println(
+                            "  ❌ Removed self-loop: " + edgeLabel + " → " + outEdgeLabel);
                 } else {
                     // This is any other connection - ADD it
                     if (cleanedModel.getEdges().containsKey(outEdgeLabel)) {
@@ -124,9 +127,7 @@ public class SelfLoopRemover {
         return cleanedModel;
     }
 
-    /**
-     * Analyze and report self-loops in ECF model
-     */
+    /** Analyze and report self-loops in ECF model */
     private static void analyzeSelfLoops(Flow ecfModel) {
         int totalEdges = ecfModel.getEdges().size();
         int selfLoopCount = 0;
@@ -166,9 +167,7 @@ public class SelfLoopRemover {
         checkDirectCycles(ecfModel);
     }
 
-    /**
-     * Count total connections in the model
-     */
+    /** Count total connections in the model */
     private static int countTotalConnections(Flow ecfModel) {
         int total = 0;
         for (Object edgeLabel : ecfModel.getEdges().keySet()) {
@@ -178,9 +177,7 @@ public class SelfLoopRemover {
         return total;
     }
 
-    /**
-     * Check for direct cycles (A → B → A) for reporting
-     */
+    /** Check for direct cycles (A → B → A) for reporting */
     private static void checkDirectCycles(Flow ecfModel) {
         int directCycles = 0;
 
@@ -194,7 +191,13 @@ public class SelfLoopRemover {
                     if (targetEdge.getOut().contains(edgeLabel)) {
                         directCycles++;
                         if (directCycles <= 5) { // Show first 5
-                            System.out.println("  🔄 Direct cycle: " + edgeLabel + " → " + outLabel + " → " + edgeLabel);
+                            System.out.println(
+                                    "  🔄 Direct cycle: "
+                                            + edgeLabel
+                                            + " → "
+                                            + outLabel
+                                            + " → "
+                                            + edgeLabel);
                         }
                     }
                 }
@@ -202,7 +205,9 @@ public class SelfLoopRemover {
         }
 
         if (directCycles > 0) {
-            System.out.println("Direct cycles (A → B → A) found: " + directCycles / 2); // Divide by 2 since we count each twice
+            System.out.println(
+                    "Direct cycles (A → B → A) found: "
+                            + directCycles / 2); // Divide by 2 since we count each twice
             if (directCycles > 10) {
                 System.out.println("  (Direct cycles are PRESERVED in cleaned model)");
             }

@@ -54,14 +54,15 @@ public class Trace2EcfIntegratorTest {
 
     @Test
     void testCreateEcfFromContent_emptyInput() {
-        assertThrows(IllegalArgumentException.class, () ->
-                Trace2EcfIntegrator.createEcfFromContent(""));
+        assertThrows(
+                IllegalArgumentException.class, () -> Trace2EcfIntegrator.createEcfFromContent(""));
     }
 
     @Test
     void testCreateEcfFromContent_nullInput() {
-        assertThrows(IllegalArgumentException.class, () ->
-                Trace2EcfIntegrator.createEcfFromContent(null));
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> Trace2EcfIntegrator.createEcfFromContent(null));
     }
 
     @Test

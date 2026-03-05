@@ -194,14 +194,15 @@ public class EndToEndTest {
         assertTrue(outFile.length() > 0, "Simulation output should not be empty");
 
         // Verify VLMC file contains valid tree structure
-        String vlmcContent = new String(
-                java.nio.file.Files.readAllBytes(vlmcFile.toPath()), StandardCharsets.UTF_8);
+        String vlmcContent =
+                new String(
+                        java.nio.file.Files.readAllBytes(vlmcFile.toPath()),
+                        StandardCharsets.UTF_8);
         assertFalse(vlmcContent.trim().isEmpty(), "VLMC file should contain model data");
     }
 
     @Test
-    public void testFullPipeline_withCsvCustomColumns()
-            throws IOException, InterruptedException {
+    public void testFullPipeline_withCsvCustomColumns() throws IOException, InterruptedException {
         // CSV with custom column names and semicolon separator
         File csv = new File(tempDir, "custom.csv");
         String[][] patterns = {{"X", "Y", "Z"}, {"X", "Z"}};

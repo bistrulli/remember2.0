@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-
 import org.junit.jupiter.api.Test;
 import suffixarray.SuffixArrayInt;
 
@@ -28,7 +27,8 @@ public class SuffixArrayIntTest {
         ArrayList<Integer> data = toList(1, 2, 3, 1, 2, 3);
         SuffixArrayInt sa = new SuffixArrayInt(data);
         int[] result = sa.count(toList(1, 2));
-        assertTrue(result[1] >= 2, "Pattern [1,2] should appear at least 2 times, got " + result[1]);
+        assertTrue(
+                result[1] >= 2, "Pattern [1,2] should appear at least 2 times, got " + result[1]);
     }
 
     @Test

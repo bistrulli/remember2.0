@@ -1,20 +1,19 @@
 package fitvlmc;
 
-import java.io.IOException;
+import ECFEntity.Flow;
 import java.io.FileWriter;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import ECFEntity.Flow;
 
-/**
- * Utility to generate ECF using new procedure and save to file for comparison
- */
+/** Utility to generate ECF using new procedure and save to file for comparison */
 public class GenerateEcfToFile {
 
     public static void main(String[] args) {
         if (args.length < 2) {
-            System.err.println("Usage: java fitvlmc.GenerateEcfToFile <input_file> <output_ecf_file>");
+            System.err.println(
+                    "Usage: java fitvlmc.GenerateEcfToFile <input_file> <output_ecf_file>");
             System.exit(1);
         }
 
