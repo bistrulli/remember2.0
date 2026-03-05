@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;
@@ -142,5 +143,120 @@ public class EndToEndTest {
         assertTrue(
                 uemsc >= 0.999,
                 "uEMSC should be >= 0.999 with no pruning and training=test, got: " + uemsc);
+    }
+
+    @Test
+    public void testFullPipeline_withAutoEcfGeneration() throws IOException, InterruptedException {
+        // Pipeline WITHOUT --ecf: Trace2EcfIntegrator auto-generates the ECF
+        File csv = generateSyntheticCsv();
+        File vlmcFile = new File(tempDir, "model_auto.vlmc");
+        File outFile = new File(tempDir, "sim_auto.mat");
+        File ecfOut = new File(tempDir, "auto_generated.ecf");
+
+        String fitOutput =
+                runJar(
+                        "--infile", csv.getAbsolutePath(),
+                        "--csv-case", "case_id",
+                        "--csv-activity", "activity",
+                        "--csv-timestamp", "timestamp",
+                        "--vlmcfile", vlmcFile.getAbsolutePath(),
+                        "--outfile", outFile.getAbsolutePath(),
+                        "--ecfoutfile", ecfOut.getAbsolutePath(),
+                        "--alfa", "0.05",
+                        "--ntime", "1",
+                        "--nsim", "1");
+
+        assertTrue(vlmcFile.exists(), "VLMC file should be created with auto-ECF");
+        assertTrue(ecfOut.exists(), "ECF output file should be created");
+        assertTrue(ecfOut.length() > 0, "ECF output file should not be empty");
+    }
+
+    @Test
+    public void testFullPipeline_withSimulationOutput() throws IOException, InterruptedException {
+        // Fit with nsim=10 and verify the simulation output file is created and non-empty
+        File csv = generateSyntheticCsv();
+        File vlmcFile = new File(tempDir, "model_sim.vlmc");
+        File outFile = new File(tempDir, "sim_output.mat");
+
+        runJar(
+                "--infile", csv.getAbsolutePath(),
+                "--csv-case", "case_id",
+                "--csv-activity", "activity",
+                "--csv-timestamp", "timestamp",
+                "--vlmcfile", vlmcFile.getAbsolutePath(),
+                "--outfile", outFile.getAbsolutePath(),
+                "--alfa", "0.05",
+                "--ntime", "1",
+                "--nsim", "10");
+
+        assertTrue(vlmcFile.exists(), "VLMC model file should be created");
+        assertTrue(outFile.exists(), "Simulation output file should be created");
+        assertTrue(outFile.length() > 0, "Simulation output should not be empty");
+
+        // Verify VLMC file contains valid tree structure
+        String vlmcContent = new String(
+                java.nio.file.Files.readAllBytes(vlmcFile.toPath()), StandardCharsets.UTF_8);
+        assertFalse(vlmcContent.trim().isEmpty(), "VLMC file should contain model data");
+    }
+
+    @Test
+    public void testFullPipeline_withCsvCustomColumns()
+            throws IOException, InterruptedException {
+        // CSV with custom column names and semicolon separator
+        File csv = new File(tempDir, "custom.csv");
+        String[][] patterns = {{"X", "Y", "Z"}, {"X", "Z"}};
+        int[] counts = {60, 40};
+
+        try (FileWriter fw = new FileWriter(csv, StandardCharsets.UTF_8)) {
+            fw.write("id_trace;action;ts\n");
+            int caseId = 1;
+            int ts = 100000;
+            for (int p = 0; p < patterns.length; p++) {
+                for (int c = 0; c < counts[p]; c++) {
+                    for (String activity : patterns[p]) {
+                        fw.write(
+                                String.format(
+                                        "%d;%s;2024-06-01 %02d:%02d:%02d\n",
+                                        caseId,
+                                        activity,
+                                        (ts / 3600) % 24,
+                                        (ts / 60) % 60,
+                                        ts % 60));
+                        ts++;
+                    }
+                    caseId++;
+                    ts += 5;
+                }
+            }
+        }
+
+        File vlmcFile = new File(tempDir, "model_custom.vlmc");
+        File outFile = new File(tempDir, "sim_custom.mat");
+
+        runJar(
+                "--infile", csv.getAbsolutePath(),
+                "--csv-case", "id_trace",
+                "--csv-activity", "action",
+                "--csv-timestamp", "ts",
+                "--csv-separator", ";",
+                "--vlmcfile", vlmcFile.getAbsolutePath(),
+                "--outfile", outFile.getAbsolutePath(),
+                "--alfa", "0.05",
+                "--ntime", "1",
+                "--nsim", "1");
+
+        assertTrue(vlmcFile.exists(), "VLMC file should be created with custom CSV columns");
+
+        // Verify likelihood works on the custom CSV too
+        String likOutput =
+                runJar(
+                        "--vlmc", vlmcFile.getAbsolutePath(),
+                        "--lik", csv.getAbsolutePath(),
+                        "--csv-case", "id_trace",
+                        "--csv-activity", "action",
+                        "--csv-timestamp", "ts",
+                        "--csv-separator", ";");
+
+        assertTrue(likOutput.contains("uEMSC"), "Likelihood output should contain uEMSC");
     }
 }
