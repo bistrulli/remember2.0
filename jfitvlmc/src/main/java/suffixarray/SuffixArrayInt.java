@@ -298,38 +298,33 @@ public class SuffixArrayInt {
 	}
 
 	private static int myCompare(ArrayList<Integer> query, SuffixInt suffix) {
-		int res=0;
-		try {
-			for (int i = 0; i < query.size(); i++) {
-				if (query.get(i) < suffix.symbolAt(i)) {
-					res=-1;
-					break;
-				}
-				if (query.get(i) > suffix.symbolAt(i)) {
-					res=1;
-					break;
-				}
+		int n = Math.min(query.size(), suffix.length());
+		for (int i = 0; i < n; i++) {
+			if (query.get(i) < suffix.symbolAt(i)) {
+				return -1;
 			}
-		} catch (IndexOutOfBoundsException e) {
-			// significa che query è più lunga di suffix ma i primi caratteri coincidono
-			// quindi query > suffix
+			if (query.get(i) > suffix.symbolAt(i)) {
+				return 1;
+			}
+		}
+		// query is longer than suffix but all shared symbols match → query > suffix
+		if (query.size() > suffix.length()) {
 			return 1;
 		}
-		return res;
+		return 0;
 	}
 
 	private static int[] myCompare(ArrayList<Integer> query, SuffixInt suffix, int k) {
+		int limit = Math.min(query.size(), suffix.length());
 		int i = k;
-		try {
-			for (; i < query.size(); i++) {
-				if (query.get(i) < suffix.symbolAt(i))
-					return new int[] { -1, i };
-				if (query.get(i) > suffix.symbolAt(i))
-					return new int[] { 1, i };
-			}
-		} catch (StringIndexOutOfBoundsException e) {
-			// significa che query è più lunga di suffix ma i primi caratteri coincidono
-			// quindi query > suffix
+		for (; i < limit; i++) {
+			if (query.get(i) < suffix.symbolAt(i))
+				return new int[] { -1, i };
+			if (query.get(i) > suffix.symbolAt(i))
+				return new int[] { 1, i };
+		}
+		// query is longer than suffix but all shared symbols match → query > suffix
+		if (query.size() > suffix.length()) {
 			return new int[] { 1, i };
 		}
 		return new int[] { 0, i };
@@ -385,12 +380,8 @@ public class SuffixArrayInt {
 		j = this.last(0, this.length() - 1, pat);
 		//j = this.last(pat);
 
-		try {
-			if ((j - i + 1) < 0) {
-				throw new Exception("negative number of occurence");
-			}
-		} catch (Exception e) {
-			e.printStackTrace();
+		if ((j - i + 1) < 0) {
+			throw new IllegalStateException("negative number of occurrences: first=" + i + " last=" + j);
 		}
 
 		/* return count */
