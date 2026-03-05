@@ -245,6 +245,43 @@ Se trovi problemi:
 
 ---
 
+## Fase 2.5: Probabilistic Review (condizionale)
+
+**Si attiva SOLO se** il diff tocca file probabilistici core:
+
+```bash
+git diff main..HEAD --name-only | grep -E '(vlmc/|EcfNavigator|fitVlmc).*\.java$'
+```
+
+Se nessun file probabilistico modificato: **SKIP** silenziosamente.
+
+Se file probabilistici toccati, segui la checklist dalla skill `.claude/skills/probabilistic/SKILL.md`:
+
+1. **Leggi** la skill probabilistic per contesto
+2. **Leggi il diff** dei file probabilistici:
+   ```bash
+   git diff main..HEAD -- jfitvlmc/src/main/java/vlmc/ jfitvlmc/src/main/java/fitvlmc/EcfNavigator.java jfitvlmc/src/main/java/fitvlmc/fitVlmc.java
+   ```
+3. **Verifica** sulle righe modificate:
+   - [ ] Distribuzioni normalizzate (somma = 1.0)?
+   - [ ] Gestione P=0 esplicita (log(0), divisione per zero)?
+   - [ ] Gradi di liberta' corretti per test statistici?
+   - [ ] Stimatore consistente?
+   - [ ] Stabilita' numerica (log-domain, overflow/underflow)?
+   - [ ] Conteggi sufficienti per affidabilita' stime?
+
+4. **Decisione:**
+   - **PASS**: Nessun problema probabilistico trovato
+   - **WARNING**: Problemi minori (es. smoothing mancante ma non critico) — annota nel report
+   - **BLOCKER**: Errore matematico (es. distribuzione non normalizzata, test statistico sbagliato) — fixa, ri-testa, committa
+
+Stampa:
+```
+Probabilistic Review: PASS | WARNING (<dettagli>) | BLOCKER (<dettagli>)
+```
+
+---
+
 ## Fase 3: Test suite completa
 
 Esegui la test suite completa:
@@ -365,6 +402,7 @@ Segui il pattern di `/ci-check` per diagnosi mirata:
 
   Review:   CLEAN | <N fix applicati>
   BS Check: <N BLOCKER fixati, M WARNING segnalati> | CLEAN
+  Prob Review: PASS | WARNING | BLOCKER | SKIPPED (no probabilistic files)
   Test:     PASS | FAIL (<dettagli>)
   CI:       PASS | FAIL | WARNING (<dettagli>) | SKIPPED (no PR)
 
