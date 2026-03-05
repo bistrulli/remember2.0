@@ -285,42 +285,62 @@ Procedi alla Fase 4.
 
 **Se FAIL:**
 ```
-CI FAIL — Analisi in corso...
+CI FAIL — Analisi con ci-check pattern...
 ```
 
-Scarica i log dei job falliti:
-```bash
-gh run view <run-id> --log-failed 2>&1 | tail -200
-```
+Segui il pattern di `/ci-check` per diagnosi mirata:
 
-Per ogni job fallito:
-1. Identifica tipo di errore e root cause
-2. Leggi i file coinvolti
-3. Applica il fix minimale
-4. Compile + test locale
-5. Commit:
+1. **Lista job e stato:**
+   ```bash
+   gh run view <run-id> --json jobs --jq '.jobs[] | {name: .name, conclusion: .conclusion}'
+   ```
+
+2. **Scarica log dei job falliti:**
+   ```bash
+   gh run view <run-id> --log-failed 2>&1 | tail -200
+   ```
+
+3. **Root cause analysis** — per ogni job fallito identifica:
+   - **Tipo**: compile error, test failure, quality gate (spotless/spotbugs/jacoco)
+   - **Causa**: la riga esatta dell'errore
+   - **File coinvolti**: quali file devono cambiare
+   - **Fix proposto**: la modifica specifica
+
+4. **Applica fix mirato:**
+   - Leggi i file con Read
+   - Applica fix con Edit
+   - Verifica localmente:
+     ```bash
+     mvn compile -q                    # se compile error
+     mvn test -q                       # se test failure
+     mvn spotless:check -q             # se formatting
+     mvn compile spotbugs:check -q     # se static analysis
+     mvn verify -q                     # se coverage
+     ```
+
+5. **Commit e push:**
    ```bash
    git add <file>
    git commit -m "$(cat <<'EOF'
-   fix(ci): <descrizione fix>
+   fix(ci): <descrizione fix mirato>
+
+   Root cause: <una riga>
 
    Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>
    EOF
    )"
-   ```
-6. Push:
-   ```bash
    git push origin $BRANCH
    ```
 
 ### 3.5.3 Retry loop
 
 - Dopo il push, aspetta la nuova CI run (torna a 3.5.1)
-- **Max 3 tentativi** di fix
+- **Max 3 tentativi** di fix con diagnosi mirata
 - Se dopo 3 retry la CI ancora fallisce:
   ```
   CI ancora in errore dopo 3 tentativi.
      Ultimo errore: <descrizione>
+     Root cause non risolta: <dettaglio>
   ```
   Procedi alla Fase 4 con stato CI = WARNING.
 
