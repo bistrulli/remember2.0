@@ -299,7 +299,7 @@ public class VlmcRoot extends VlmcNode {
 
 		int[] suffInfo = learner.getSa().count(String.join(" ", ctx));
 
-		double totalCtx = (new Integer(suffInfo[1])).doubleValue();
+		double totalCtx = (double) suffInfo[1];
 
 		dist.totalCtx = totalCtx;
 
@@ -315,7 +315,7 @@ public class VlmcRoot extends VlmcNode {
 			double usedCtx = 0;
 			for (Edge outEdge : e.getOut()) {
 				ctxNew.set(LastId, outEdge.getLabel());
-				double count = new Integer(learner.getSa().count(String.join(" ", ctxNew))[1]).doubleValue();
+				double count = (double) learner.getSa().count(String.join(" ", ctxNew))[1];
 				if (count <= 0) {
 					continue;
 				}
