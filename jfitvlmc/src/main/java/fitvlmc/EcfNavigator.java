@@ -2,6 +2,8 @@ package fitvlmc;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.TreeMap;
 
 import ECFEntity.Edge;
@@ -60,44 +62,39 @@ public class EcfNavigator {
 	
 	
 	private VlmcNode visit(Edge e, VlmcNode parent, ArrayList<String> ctx) {
-		return visit(e, parent, ctx, 0);  // Start with depth 0
+		return visit(e, parent, ctx, 0, new HashSet<>());
 	}
 
-	/**
-	 * Visit ECF edge with depth limiting to prevent infinite recursion in cyclic models
-	 * @param e Edge to visit
-	 * @param parent Parent VLMC node
-	 * @param ctx Context
-	 * @param depth Current navigation depth
-	 * @return VLMC node
-	 */
-	private VlmcNode visit(Edge e, VlmcNode parent, ArrayList<String> ctx, int depth) {
-		//istanzio il nodo vlmc
+	private VlmcNode visit(Edge e, VlmcNode parent, ArrayList<String> ctx, int depth, Set<String> visitedContexts) {
 		VlmcNode vn = new VlmcNode();
 		vn.setLabel(e.getLabel());
 		vn.setParent(parent);
-		//count the total number of nodes
 		VlmcRoot.nNodes++;
 
 		ArrayList<String> ctx_new = new ArrayList<String>(1);
 		ctx_new.add(e.getLabel());
 		ctx_new.addAll(1, ctx);
 
-		//creo la next symbol distribution
+		// Track visited contexts to avoid redundant exploration in cyclic ECFs
+		String ctxKey = String.join(" ", ctx_new);
+		if (!visitedContexts.add(ctxKey)) {
+			// Context already explored — return as leaf to prevent duplicate subtrees
+			vn.setDist(createNextSymbolDistribution(ctx_new));
+			return vn;
+		}
+
 		vn.setDist(createNextSymbolDistribution(ctx_new));
 
-		// Depth limit check — return leaf node (with distribution) if max depth reached
 		if (depth >= maxNavigationDepth) return vn;
 
 		ArrayList<String> toVisit = new ArrayList<String>(1);
 		toVisit.add(null);
 		toVisit.addAll(1, ctx_new);
 		if(e.getOut().size() > 0) {
-			//lancio la visita in profondità ai padri
 			for(Edge inEdge : e.getIn()) {
 				toVisit.set(0, inEdge.getLabel());
 				if(this.checkIfObserved(toVisit)) {
-					vn.addChild(this.visit(inEdge, vn, ctx_new, depth + 1));  // Keep depth parameter for compatibility
+					vn.addChild(this.visit(inEdge, vn, ctx_new, depth + 1, visitedContexts));
 				}
 			}
 		}
@@ -198,12 +195,18 @@ public class EcfNavigator {
 				dist.getProbability().add(count);
 				dist.getSymbols().add(outEdge.getLabel());
 			}
-			// Normalize probabilities to sum to 1
 			if (usedCtx > 0) {
 				for (int i = 0; i < dist.getProbability().size(); i++) {
 					dist.getProbability().set(i, dist.getProbability().get(i) / usedCtx);
 				}
 				dist.totalCtx = usedCtx;
+			} else {
+				// No observations — uniform prior over all out-edges
+				double uniform = 1.0 / e.getOut().size();
+				for (Edge outEdge : e.getOut()) {
+					dist.getProbability().add(uniform);
+					dist.getSymbols().add(outEdge.getLabel());
+				}
 			}
 		}
 		return dist;
