@@ -54,6 +54,20 @@ git branch -r --merged origin/main | grep -v -E 'main|master|develop|HEAD' | sed
 git branch -vv | grep ': gone]' | awk '{print $1}'
 ```
 
+### 2.4 Squash-merge detection (GitHub)
+
+`git branch --merged` non rileva branch merged via squash/rebase su GitHub.
+Per ogni branch locale/remoto NON catturato dai passi 2.1-2.3, verifica se esiste una PR merged:
+
+```bash
+gh pr list --state merged --head "<branch-name>" --json number --jq '.[0].number'
+```
+
+Se ritorna un numero di PR, il branch e' stato squash-merged ed e' candidato a cancellazione.
+Classifica questi branch separatamente come **"squash-merged (via PR)"** nel report.
+
+**Nota:** richiede `gh` autenticato. Se `gh` non e' disponibile, salta questo passo con un warning.
+
 ---
 
 ## Fase 3: Report
@@ -66,8 +80,10 @@ Stampa:
 
   Branch locali merged (candidati a cancellazione):
     - feat/fix-critical-learning-bugs-r2
-    - feat/fix-vlmc-learning-bugs
     - test/ci-verification
+
+  Branch squash-merged via PR (candidati a cancellazione):
+    - feat/fix-vlmc-learning-bugs (PR #3 merged)
 
   Branch locali con remote cancellato:
     - feat/old-experiment
@@ -112,6 +128,8 @@ git push origin --delete <branch-name>
 ```
 
 Usa `-d` (safe delete), mai `-D`. Se `-d` fallisce (branch non merged), segnala e salta.
+
+**Eccezione squash-merged:** per branch confermati come squash-merged via `gh pr list`, se `-d` fallisce usa `-D` — il merge e' confermato da GitHub, git semplicemente non lo riconosce.
 
 ---
 
