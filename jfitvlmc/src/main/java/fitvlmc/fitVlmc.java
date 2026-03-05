@@ -224,13 +224,17 @@ public class fitVlmc {
 
 					for (int t = 0; t < inCtx.size(); t++) {
 						ArrayList<String> ctx = inCtx.get(t);
+						if (ctx.isEmpty()) {
+							System.err.println("WARNING: trace " + t + " is empty, skipping");
+							continue;
+						}
 						ArrayList<Double> likValues = learner.vlmc.getLikelihood(ctx);
 
 						// Write per-prefix likelihood with context details
 						// Replicate VLMC navigation to access node distributions
 						ArrayList<String> tmpCtx = new ArrayList<>(Arrays.asList(ctx.get(0)));
 						VlmcNode state = learner.vlmc.getState(tmpCtx);
-						for (int p = 0; p < likValues.size(); p++) {
+						for (int p = 0; p < likValues.size() && p + 1 < ctx.size(); p++) {
 							// Build prefix string (activities 0..p)
 							StringBuilder prefixSb = new StringBuilder();
 							for (int k = 0; k <= p; k++) {
