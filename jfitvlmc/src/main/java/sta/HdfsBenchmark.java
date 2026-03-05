@@ -150,7 +150,8 @@ public class HdfsBenchmark {
                 totalScore += score;
             }
             scored.add(
-                    new BenchmarkMetrics.ScoredTrace(session.blockId, totalScore, session.isAnomaly));
+                    new BenchmarkMetrics.ScoredTrace(
+                            session.blockId, totalScore, session.isAnomaly));
         }
         return scored;
     }

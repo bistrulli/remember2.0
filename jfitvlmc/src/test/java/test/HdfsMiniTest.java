@@ -2,11 +2,8 @@ package test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-import fitvlmc.HdfsLogParser;
 import fitvlmc.HdfsLogParser.HdfsSession;
 import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -64,8 +61,7 @@ public class HdfsMiniTest {
 
     @Test
     public void testPipelineEndToEnd() throws Exception {
-        HdfsBenchmark benchmark =
-                new HdfsBenchmark(0.8, 0.01, new double[] {0.1, 1.0, 5.0, 10.0});
+        HdfsBenchmark benchmark = new HdfsBenchmark(0.8, 0.01, new double[] {0.1, 1.0, 5.0, 10.0});
         HdfsBenchmark.BenchmarkResult result = benchmark.run(allSessions, tempDir);
 
         assertNotNull(result.vlmc, "VLMC should be trained");
@@ -130,9 +126,7 @@ public class HdfsMiniTest {
 
         assertEquals(400, result.nTraining, "Should train on 80% of normals (500*0.8=400)");
         assertEquals(
-                150,
-                result.nTest,
-                "Should test on 20% normals (100) + all anomalies (50) = 150");
+                150, result.nTest, "Should test on 20% normals (100) + all anomalies (50) = 150");
         assertEquals(50, result.nAnomalies, "Should have 50 anomalies");
     }
 }

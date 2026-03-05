@@ -29,7 +29,8 @@ public class HdfsLogParser {
     public List<HdfsSession> parseStructuredLog(File csvFile) throws IOException {
         BufferedReader reader =
                 new BufferedReader(
-                        new InputStreamReader(new FileInputStream(csvFile), StandardCharsets.UTF_8));
+                        new InputStreamReader(
+                                new FileInputStream(csvFile), StandardCharsets.UTF_8));
 
         String headerLine = reader.readLine();
         if (headerLine == null || headerLine.trim().isEmpty()) {
@@ -86,7 +87,8 @@ public class HdfsLogParser {
 
         BufferedReader reader =
                 new BufferedReader(
-                        new InputStreamReader(new FileInputStream(labelFile), StandardCharsets.UTF_8));
+                        new InputStreamReader(
+                                new FileInputStream(labelFile), StandardCharsets.UTF_8));
 
         String headerLine = reader.readLine();
         if (headerLine == null) {

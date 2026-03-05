@@ -14,7 +14,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import sta.AutoBetaSelector;
 import sta.AutoBetaSelector.TreeStats;
-import sta.BenchmarkMetrics;
 import sta.StaPredictor;
 import sta.StaResult;
 import vlmc.VlmcRoot;

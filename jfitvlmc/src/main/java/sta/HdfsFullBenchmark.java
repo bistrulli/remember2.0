@@ -4,7 +4,6 @@ import fitvlmc.HdfsLogParser;
 import fitvlmc.HdfsLogParser.HdfsSession;
 import java.io.File;
 import java.util.List;
-import java.util.Map;
 
 public class HdfsFullBenchmark {
 
@@ -112,7 +111,8 @@ public class HdfsFullBenchmark {
         }
         java.util.Collections.shuffle(normals, new java.util.Random(42));
         int splitIdx = (int) (normals.size() * 0.8);
-        List<HdfsSession> testAll = new java.util.ArrayList<>(normals.subList(splitIdx, normals.size()));
+        List<HdfsSession> testAll =
+                new java.util.ArrayList<>(normals.subList(splitIdx, normals.size()));
         testAll.addAll(anomalies);
         return testAll;
     }

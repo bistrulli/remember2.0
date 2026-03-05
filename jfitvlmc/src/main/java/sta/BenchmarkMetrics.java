@@ -114,8 +114,7 @@ public class BenchmarkMetrics {
             double threshold = scores.get(i);
             int tp = 0, fp = 0;
             for (ScoredTrace st : traces) {
-                double s =
-                        Double.isFinite(st.anomalyScore) ? st.anomalyScore : Double.MAX_VALUE;
+                double s = Double.isFinite(st.anomalyScore) ? st.anomalyScore : Double.MAX_VALUE;
                 if (s >= threshold) {
                     if (st.isAnomaly) tp++;
                     else fp++;
