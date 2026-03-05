@@ -2,6 +2,7 @@ package fitvlmc;
 
 import java.io.IOException;
 import java.io.FileWriter;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import ECFEntity.Flow;
@@ -38,7 +39,7 @@ public class GenerateEcfToFile {
             System.out.println("Total edges: " + ecfModel.getEdges().size());
 
             // Save ECF to file
-            try (FileWriter writer = new FileWriter(outputFile)) {
+            try (FileWriter writer = new FileWriter(outputFile, StandardCharsets.UTF_8)) {
                 writer.write(ecfModel.toString());
             }
 

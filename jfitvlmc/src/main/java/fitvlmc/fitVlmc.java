@@ -9,6 +9,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -138,7 +139,7 @@ public class fitVlmc {
 
 			FileWriter vlmcWrite;
 			try {
-				vlmcWrite = new FileWriter(new File(vlmcOutFile));
+				vlmcWrite = new FileWriter(new File(vlmcOutFile), StandardCharsets.UTF_8);
 				vlmcWrite.write(learner.vlmc.toString(new String[] { "" }));
 				vlmcWrite.close();
 			} catch (IOException e) {
@@ -181,7 +182,7 @@ public class fitVlmc {
 					}
 				} else {
 					// Legacy format: all on one line, traces separated by end$
-					try (BufferedReader br = new BufferedReader(new FileReader(ctxFile))) {
+					try (BufferedReader br = new BufferedReader(new FileReader(ctxFile, StandardCharsets.UTF_8))) {
 						String ctxStr = br.readLine();
 						if (ctxStr != null) {
 							String[] ctxs = ctxStr.split("end\\$");
@@ -213,8 +214,8 @@ public class fitVlmc {
 				double totalLogLikelihood = 0.0;
 				int validTraces = 0;
 
-				try (FileWriter fwLik = new FileWriter(likFile);
-				     FileWriter fwPrefix = new FileWriter(likPrefixFile)) {
+				try (FileWriter fwLik = new FileWriter(likFile, StandardCharsets.UTF_8);
+				     FileWriter fwPrefix = new FileWriter(likPrefixFile, StandardCharsets.UTF_8)) {
 
 					// Headers
 					fwLik.write("trace_id,trace_length,likelihood,log_likelihood\n");
@@ -382,7 +383,7 @@ public class fitVlmc {
 
 			FileWriter vlmcWrite;
 			try {
-				vlmcWrite = new FileWriter(new File(vlmcOutFile));
+				vlmcWrite = new FileWriter(new File(vlmcOutFile), StandardCharsets.UTF_8);
 				vlmcWrite.write(learner.vlmc.toString(new String[] { "" }));
 				vlmcWrite.close();
 			} catch (IOException e) {
@@ -505,7 +506,7 @@ public class fitVlmc {
 	private void saveEcfModel(Flow ecfModel, String ecfOutFile) {
 		try {
 			System.out.println("Saving ECF model to: " + ecfOutFile);
-			FileWriter ecfWriter = new FileWriter(new File(ecfOutFile));
+			FileWriter ecfWriter = new FileWriter(new File(ecfOutFile), StandardCharsets.UTF_8);
 			ecfWriter.write(ecfModel.toString());
 			ecfWriter.close();
 			System.out.println("ECF model saved successfully.");
@@ -527,7 +528,7 @@ public class fitVlmc {
 		System.out.println(outfile.toString());
 		if (fitVlmc.nSim > 0) {
 			try {
-				FileWriter w = new FileWriter(outfile);
+				FileWriter w = new FileWriter(outfile, StandardCharsets.UTF_8);
 				for (ArrayList<String> trace : traces) {
 					for (String activity : trace) {
 						if(!activity.equals(trace.get(trace.size()-1))) {

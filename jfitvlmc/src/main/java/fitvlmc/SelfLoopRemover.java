@@ -2,6 +2,7 @@ package fitvlmc;
 
 import java.io.IOException;
 import java.io.FileWriter;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import ECFEntity.Flow;
@@ -43,7 +44,7 @@ public class SelfLoopRemover {
             analyzeSelfLoops(cleanedModel);
 
             // Save cleaned ECF
-            try (FileWriter writer = new FileWriter(cleanedEcfFile)) {
+            try (FileWriter writer = new FileWriter(cleanedEcfFile, StandardCharsets.UTF_8)) {
                 writer.write(cleanedModel.toString());
             }
 
