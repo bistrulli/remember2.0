@@ -2,7 +2,6 @@ package test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-import java.util.Arrays;
 import org.junit.jupiter.api.Test;
 import sta.StaWeightFunction;
 import vlmc.NextSymbolsDistribution;
@@ -42,15 +41,18 @@ public class StaWeightFunctionTest {
         root.setLabel("root");
 
         VlmcNode parent =
-                createNodeWithDist("A", new String[] {"X", "Y"}, new double[] {0.5, 0.5}, 100, root);
+                createNodeWithDist(
+                        "A", new String[] {"X", "Y"}, new double[] {0.5, 0.5}, 100, root);
         root.getChildren().add(parent);
 
         VlmcNode child =
-                createNodeWithDist("B", new String[] {"X", "Y"}, new double[] {0.5, 0.5}, 50, parent);
+                createNodeWithDist(
+                        "B", new String[] {"X", "Y"}, new double[] {0.5, 0.5}, 50, parent);
         parent.getChildren().add(child);
 
         StaWeightFunction fn = StaWeightFunction.klBased();
-        assertEquals(0.0, fn.score(child), 1e-10, "Identical distributions should have KL=0, score=0");
+        assertEquals(
+                0.0, fn.score(child), 1e-10, "Identical distributions should have KL=0, score=0");
     }
 
     @Test
@@ -59,16 +61,19 @@ public class StaWeightFunctionTest {
         root.setLabel("root");
 
         VlmcNode parent =
-                createNodeWithDist("A", new String[] {"X", "Y"}, new double[] {0.5, 0.5}, 100, root);
+                createNodeWithDist(
+                        "A", new String[] {"X", "Y"}, new double[] {0.5, 0.5}, 100, root);
         root.getChildren().add(parent);
 
         VlmcNode child =
-                createNodeWithDist("B", new String[] {"X", "Y"}, new double[] {0.9, 0.1}, 50, parent);
+                createNodeWithDist(
+                        "B", new String[] {"X", "Y"}, new double[] {0.9, 0.1}, 50, parent);
         parent.getChildren().add(child);
 
         StaWeightFunction fn = StaWeightFunction.klBased();
         double score = fn.score(child);
-        assertTrue(score > 0, "Different distributions should produce positive score, got: " + score);
+        assertTrue(
+                score > 0, "Different distributions should produce positive score, got: " + score);
     }
 
     @Test
@@ -77,17 +82,20 @@ public class StaWeightFunctionTest {
         root.setLabel("root");
 
         VlmcNode parent =
-                createNodeWithDist("A", new String[] {"X", "Y"}, new double[] {0.5, 0.5}, 200, root);
+                createNodeWithDist(
+                        "A", new String[] {"X", "Y"}, new double[] {0.5, 0.5}, 200, root);
         root.getChildren().add(parent);
 
         // Low KL, low n
         VlmcNode childLow =
-                createNodeWithDist("B", new String[] {"X", "Y"}, new double[] {0.6, 0.4}, 10, parent);
+                createNodeWithDist(
+                        "B", new String[] {"X", "Y"}, new double[] {0.6, 0.4}, 10, parent);
         childLow.setParent(parent);
 
         // High KL, high n
         VlmcNode childHigh =
-                createNodeWithDist("C", new String[] {"X", "Y"}, new double[] {0.95, 0.05}, 200, parent);
+                createNodeWithDist(
+                        "C", new String[] {"X", "Y"}, new double[] {0.95, 0.05}, 200, parent);
         childHigh.setParent(parent);
 
         StaWeightFunction fn = StaWeightFunction.klBased();

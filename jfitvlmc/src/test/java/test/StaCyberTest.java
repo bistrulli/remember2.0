@@ -2,20 +2,20 @@ package test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import fitvlmc.fitVlmc;
 import java.io.File;
-import java.io.IOException;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import org.apache.commons.math3.distribution.ChiSquaredDistribution;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import sta.ContextContribution;
 import sta.StaPredictor;
 import sta.StaResult;
-import fitvlmc.fitVlmc;
 import vlmc.VlmcRoot;
 
 public class StaCyberTest {
@@ -24,6 +24,11 @@ public class StaCyberTest {
 
     private VlmcRoot vlmc;
     private CyberDatasetGenerator generator;
+
+    @AfterEach
+    public void cleanupStatics() throws Exception {
+        resetFitVlmcStatics();
+    }
 
     @BeforeEach
     public void trainVlmc() throws Exception {
@@ -80,11 +85,12 @@ public class StaCyberTest {
         // Also compute VLMC classic scores
         double vlmcMeanNormal = meanAnomalyScoreVlmc(testNormals);
         double vlmcMeanAttack = meanAnomalyScoreVlmc(testVariants);
-        double vlmcSeparation = vlmcMeanAttack > 0 && vlmcMeanNormal > 0
-                ? vlmcMeanAttack / vlmcMeanNormal : 0;
+        double vlmcSeparation =
+                vlmcMeanAttack > 0 && vlmcMeanNormal > 0 ? vlmcMeanAttack / vlmcMeanNormal : 0;
 
         System.out.println("=== VLMC vs STA Comparison ===");
-        System.out.printf("VLMC Classic: normal=%.4f attack=%.4f separation=%.4f%n",
+        System.out.printf(
+                "VLMC Classic: normal=%.4f attack=%.4f separation=%.4f%n",
                 vlmcMeanNormal, vlmcMeanAttack, vlmcSeparation);
 
         double[] betas = {0.1, 0.5, 1.0, 2.0, 5.0, 10.0};
@@ -93,10 +99,11 @@ public class StaCyberTest {
 
             double staMeanNormal = meanAnomalyScoreSta(sta, testNormals);
             double staMeanAttack = meanAnomalyScoreSta(sta, testVariants);
-            double staSeparation = staMeanAttack > 0 && staMeanNormal > 0
-                    ? staMeanAttack / staMeanNormal : 0;
+            double staSeparation =
+                    staMeanAttack > 0 && staMeanNormal > 0 ? staMeanAttack / staMeanNormal : 0;
 
-            System.out.printf("STA beta=%.1f: normal=%.4f attack=%.4f separation=%.4f%n",
+            System.out.printf(
+                    "STA beta=%.1f: normal=%.4f attack=%.4f separation=%.4f%n",
                     beta, staMeanNormal, staMeanAttack, staSeparation);
 
             if (staSeparation > bestSeparationRatio) {
@@ -105,12 +112,15 @@ public class StaCyberTest {
             }
         }
 
-        System.out.printf("Best STA beta=%.1f separation=%.4f (VLMC=%.4f)%n",
+        System.out.printf(
+                "Best STA beta=%.1f separation=%.4f (VLMC=%.4f)%n",
                 bestBeta, bestSeparationRatio, vlmcSeparation);
 
         // STA should achieve separation ratio >= VLMC classic for at least one beta
-        assertTrue(bestSeparationRatio >= vlmcSeparation * 0.9,
-                String.format("STA best separation (%.4f) should be comparable to VLMC (%.4f)",
+        assertTrue(
+                bestSeparationRatio >= vlmcSeparation * 0.9,
+                String.format(
+                        "STA best separation (%.4f) should be comparable to VLMC (%.4f)",
                         bestSeparationRatio, vlmcSeparation));
     }
 
@@ -129,7 +139,8 @@ public class StaCyberTest {
 
             StaResult result = sta.predict(vlmc, history);
 
-            System.out.printf("t=%d history=%s next=%s anomaly=%.4f%n",
+            System.out.printf(
+                    "t=%d history=%s next=%s anomaly=%.4f%n",
                     t, history, nextSymbol, result.getAnomalyScore(nextSymbol));
             for (ContextContribution cc : result.getContributions()) {
                 if (cc.getWeight() > 0.05) {
@@ -142,7 +153,8 @@ public class StaCyberTest {
         List<String> historyAtExfil = Arrays.asList("SF", "SF", "SS", "SU", "FR");
         StaResult resultAtExfil = sta.predict(vlmc, historyAtExfil);
 
-        assertTrue(resultAtExfil.getContributions().size() >= 2,
+        assertTrue(
+                resultAtExfil.getContributions().size() >= 2,
                 "Should have multiple context contributions for explainability");
 
         // The mixed distribution should assign some probability to NC
@@ -171,7 +183,8 @@ public class StaCyberTest {
         }
 
         // Best beta should be in a reasonable range (not at extremes)
-        assertTrue(bestBeta >= 0.1 && bestBeta <= 10.0,
+        assertTrue(
+                bestBeta >= 0.1 && bestBeta <= 10.0,
                 String.format("Best beta (%.1f) should be in [0.1, 10.0]", bestBeta));
     }
 
@@ -184,7 +197,8 @@ public class StaCyberTest {
 
         // Normal traces should not have extremely high anomaly scores
         // (finite and reasonable)
-        assertTrue(meanNormal < Double.POSITIVE_INFINITY,
+        assertTrue(
+                meanNormal < Double.POSITIVE_INFINITY,
                 "Normal traces should have finite anomaly score");
         assertTrue(meanNormal > 0, "Normal traces should have positive anomaly score");
     }

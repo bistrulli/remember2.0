@@ -60,8 +60,7 @@ public class StaPredictor {
         return softmax(scores, beta);
     }
 
-    public NextSymbolsDistribution mixDistributions(
-            List<VlmcNode> contexts, double[] weights) {
+    public NextSymbolsDistribution mixDistributions(List<VlmcNode> contexts, double[] weights) {
 
         Set<String> allSymbols = new LinkedHashSet<>();
         for (VlmcNode node : contexts) {

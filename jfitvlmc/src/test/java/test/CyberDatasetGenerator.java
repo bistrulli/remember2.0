@@ -105,8 +105,12 @@ public class CyberDatasetGenerator {
     };
 
     private static final String[] TEST_VARIANT_LABELS = {
-        "brute_2fail", "brute_6fail", "insider_simple", "mixed_brute_lateral",
-        "lateral_4hop", "brute_write_exfil"
+        "brute_2fail",
+        "brute_6fail",
+        "insider_simple",
+        "mixed_brute_lateral",
+        "lateral_4hop",
+        "brute_write_exfil"
     };
 
     public CyberDatasetGenerator(long seed) {
@@ -118,16 +122,19 @@ public class CyberDatasetGenerator {
     }
 
     public List<List<String>> generateTrainingNormal(int count) {
-        return generateFromPatterns(count, NORMAL_PATTERNS, NORMAL_VARIANT_WEIGHTS, NORMAL_TYPE_WEIGHTS);
+        return generateFromPatterns(
+                count, NORMAL_PATTERNS, NORMAL_VARIANT_WEIGHTS, NORMAL_TYPE_WEIGHTS);
     }
 
     public List<List<String>> generateTrainingAttack(int count) {
-        return generateFromPatterns(count, ATTACK_PATTERNS, ATTACK_VARIANT_WEIGHTS, ATTACK_TYPE_WEIGHTS);
+        return generateFromPatterns(
+                count, ATTACK_PATTERNS, ATTACK_VARIANT_WEIGHTS, ATTACK_TYPE_WEIGHTS);
     }
 
     public List<List<String>> generateTestNormal(int count) {
         // Same distribution as training normals
-        return generateFromPatterns(count, NORMAL_PATTERNS, NORMAL_VARIANT_WEIGHTS, NORMAL_TYPE_WEIGHTS);
+        return generateFromPatterns(
+                count, NORMAL_PATTERNS, NORMAL_VARIANT_WEIGHTS, NORMAL_TYPE_WEIGHTS);
     }
 
     public List<List<String>> generateTestAttackVariants(int totalCount) {

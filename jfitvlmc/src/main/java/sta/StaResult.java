@@ -1,6 +1,5 @@
 package sta;
 
-import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -12,8 +11,7 @@ public class StaResult {
     private final List<ContextContribution> contributions;
 
     public StaResult(
-            NextSymbolsDistribution mixedDistribution,
-            List<ContextContribution> contributions) {
+            NextSymbolsDistribution mixedDistribution, List<ContextContribution> contributions) {
         this.mixedDistribution = mixedDistribution;
         this.contributions = contributions;
     }

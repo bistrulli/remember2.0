@@ -30,10 +30,9 @@ public class StaPredictorTest {
      *     └── "A" — P(A)=0.9, P(C)=0.1      (after A→B, very different from parent, n=50)
      * </pre>
      *
-     * Key properties for testing:
-     * - Node B-under-A has KL > 0 (distribution differs from parent A)
-     * - Node A-under-B has high KL (0.9/0.1 vs 0.6/0.4)
-     * - Root has a broad distribution (low information)
+     * Key properties for testing: - Node B-under-A has KL > 0 (distribution differs from parent A)
+     * - Node A-under-B has high KL (0.9/0.1 vs 0.6/0.4) - Root has a broad distribution (low
+     * information)
      */
     @BeforeEach
     public void buildVlmc() {
@@ -101,7 +100,8 @@ public class StaPredictorTest {
         for (String symbol : classicNode.getDist().getSymbols()) {
             double staPr = result.getMixedDistribution().getProbBySymbol(symbol);
             double classicPr = classicNode.getDist().getProbBySymbol(symbol);
-            assertEquals(classicPr, staPr, 0.01, "With high beta, STA should match VLMC for " + symbol);
+            assertEquals(
+                    classicPr, staPr, 0.01, "With high beta, STA should match VLMC for " + symbol);
         }
     }
 
@@ -115,7 +115,11 @@ public class StaPredictorTest {
 
         double expectedWeight = 1.0 / contribs.size();
         for (ContextContribution cc : contribs) {
-            assertEquals(expectedWeight, cc.getWeight(), 1e-9, "With beta=0, all weights should be uniform");
+            assertEquals(
+                    expectedWeight,
+                    cc.getWeight(),
+                    1e-9,
+                    "With beta=0, all weights should be uniform");
         }
     }
 
@@ -155,9 +159,16 @@ public class StaPredictorTest {
 
         StaResult result = sta.predict(vlmc, history);
 
-        assertTrue(result.getContributions().size() >= 2, "Should have root + at least one matched context");
-        assertEquals(0, result.getContributions().get(0).getDepth(), "First contribution should be root");
-        assertTrue(result.getContributions().get(0).getWeight() > 0, "Root should have positive weight");
+        assertTrue(
+                result.getContributions().size() >= 2,
+                "Should have root + at least one matched context");
+        assertEquals(
+                0,
+                result.getContributions().get(0).getDepth(),
+                "First contribution should be root");
+        assertTrue(
+                result.getContributions().get(0).getWeight() > 0,
+                "Root should have positive weight");
     }
 
     @Test
@@ -212,7 +223,10 @@ public class StaPredictorTest {
         StaResult result = sta.predict(vlmc, history);
         double score = result.getAnomalyScore("UNKNOWN");
 
-        assertEquals(Double.POSITIVE_INFINITY, score, "Unseen symbol should have infinite anomaly score");
+        assertEquals(
+                Double.POSITIVE_INFINITY,
+                score,
+                "Unseen symbol should have infinite anomaly score");
     }
 
     @Test
@@ -223,7 +237,9 @@ public class StaPredictorTest {
         StaResult result = sta.predict(vlmc, history);
         double score = result.getAnomalyScore("B");
 
-        assertTrue(score > 0 && score < Double.POSITIVE_INFINITY, "Known symbol should have finite positive score");
+        assertTrue(
+                score > 0 && score < Double.POSITIVE_INFINITY,
+                "Known symbol should have finite positive score");
     }
 
     @Test

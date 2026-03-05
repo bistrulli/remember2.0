@@ -61,13 +61,16 @@ public class StaAnomalyScorer {
         sb.append(String.format("Trace: %s%n", String.join(" ", trace)));
         sb.append(String.format("Anomaly score (STA):  %.4f%n", ts.staScore));
         sb.append(String.format("Anomaly score (VLMC): %.4f%n", ts.vlmcScore));
-        sb.append(String.format("Improvement: %.2fx%n",
-                ts.vlmcScore > 0 ? ts.staScore / ts.vlmcScore : 0));
+        sb.append(
+                String.format(
+                        "Improvement: %.2fx%n", ts.vlmcScore > 0 ? ts.staScore / ts.vlmcScore : 0));
         sb.append("\nPer-step detail:\n");
 
         for (StepDetail step : ts.steps) {
-            sb.append(String.format("  t=%d next=%s  STA=%.4f VLMC=%.4f%n",
-                    step.time, step.nextSymbol, step.staScore, step.vlmcScore));
+            sb.append(
+                    String.format(
+                            "  t=%d next=%s  STA=%.4f VLMC=%.4f%n",
+                            step.time, step.nextSymbol, step.staScore, step.vlmcScore));
 
             if (step.staResult != null) {
                 for (ContextContribution cc : step.staResult.getContributions()) {
@@ -86,7 +89,8 @@ public class StaAnomalyScorer {
 
     public String formatCsvLine(List<String> trace) {
         TraceScore ts = scoreTrace(trace);
-        return String.format("%s,%.6f,%.6f,%d",
+        return String.format(
+                "%s,%.6f,%.6f,%d",
                 String.join(" ", trace), ts.staScore, ts.vlmcScore, trace.size());
     }
 
@@ -111,7 +115,11 @@ public class StaAnomalyScorer {
         public final double vlmcScore;
         public final StaResult staResult;
 
-        StepDetail(int time, String nextSymbol, double staScore, double vlmcScore,
+        StepDetail(
+                int time,
+                String nextSymbol,
+                double staScore,
+                double vlmcScore,
                 StaResult staResult) {
             this.time = time;
             this.nextSymbol = nextSymbol;
