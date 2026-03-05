@@ -151,50 +151,97 @@ public class fitVlmc {
 
 			if (fitVlmc.cmpLik != null) {
 
-				File ctxFile = new File(fitVlmc.cmpLik);
-				FileReader fr = null;
-				String ctxStr = null;
-				try {
-					fr = new FileReader(ctxFile);
-					BufferedReader br = new BufferedReader(fr);
-					ctxStr = br.readLine();
-				} catch (FileNotFoundException e1) {
-					e1.printStackTrace();
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
+				// Read traces - support both CSV and legacy format
 				ArrayList<ArrayList<String>> inCtx = new ArrayList<>();
-				String[] ctxs = ctxStr.toString().split("end\\$");
-				for (int i = 0; i < ctxs.length; i++) {
-					ArrayList<String> ctx = new ArrayList<>();
-					String[] pieces = (ctxs[i] + "end$").trim().split(" ");
-					for (int j = 0; j < pieces.length; j++) {
-						ctx.add(pieces[j]);
+				File ctxFile = new File(fitVlmc.cmpLik);
+
+				if (fitVlmc.isCsvOptionsSet() || CsvEventLogReader.isCsvFile(ctxFile)) {
+					// CSV event log format
+					CsvEventLogReader csvReader = new CsvEventLogReader(
+							fitVlmc.csvCaseColumn, fitVlmc.csvActivityColumn,
+							fitVlmc.csvTimestampColumn, fitVlmc.csvSeparator);
+					try {
+						inCtx = csvReader.readCsvAsTraces(ctxFile);
+						System.out.println("Loaded " + inCtx.size() + " traces from CSV for likelihood.");
+					} catch (IOException e) {
+						System.err.println("ERROR reading CSV for likelihood: " + e.getMessage());
+						e.printStackTrace();
+						System.exit(1);
 					}
-					inCtx.add(ctx);
+				} else {
+					// Legacy format: all on one line, traces separated by end$
+					try (BufferedReader br = new BufferedReader(new FileReader(ctxFile))) {
+						String ctxStr = br.readLine();
+						if (ctxStr != null) {
+							String[] ctxs = ctxStr.split("end\\$");
+							for (int i = 0; i < ctxs.length; i++) {
+								String trimmed = ctxs[i].trim();
+								if (trimmed.isEmpty()) continue;
+								ArrayList<String> ctx = new ArrayList<>();
+								String[] pieces = (trimmed + " end$").trim().split(" ");
+								for (int j = 0; j < pieces.length; j++) {
+									if (!pieces[j].isEmpty()) {
+										ctx.add(pieces[j]);
+									}
+								}
+								inCtx.add(ctx);
+							}
+						}
+					} catch (IOException e) {
+						System.err.println("ERROR reading likelihood file: " + e.getMessage());
+						e.printStackTrace();
+						System.exit(1);
+					}
 				}
 
-				String[] pathPicies = fitVlmc.vlmcFile.split("/");
-				File likFile = new File(pathPicies[pathPicies.length - 1] + ".lik");
-				FileWriter fw = null;
-				try {
-					fw = new FileWriter(likFile);
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
-				for (ArrayList<String> ctx : inCtx) {
-					ArrayList<Double> l = learner.vlmc.getLikelihood(ctx);
-					try {
-						fw.write(String.format("%f,%d\n", l.get(l.size() - 1), l.size()));
-					} catch (IOException e) {
-						e.printStackTrace();
+				// Compute likelihood and write output files
+				String baseName = Paths.get(fitVlmc.cmpLik).getFileName().toString().replaceAll("\\.[^.]+$", "");
+				File likFile = new File(baseName + ".lik");
+				File likPrefixFile = new File(baseName + ".lik.prefix");
+
+				double totalLogLikelihood = 0.0;
+				int validTraces = 0;
+
+				try (FileWriter fwLik = new FileWriter(likFile);
+				     FileWriter fwPrefix = new FileWriter(likPrefixFile)) {
+
+					// Headers
+					fwLik.write("trace_id,trace_length,likelihood,log_likelihood\n");
+					fwPrefix.write("trace_id,prefix_length,likelihood\n");
+
+					for (int t = 0; t < inCtx.size(); t++) {
+						ArrayList<String> ctx = inCtx.get(t);
+						ArrayList<Double> likValues = learner.vlmc.getLikelihood(ctx);
+
+						// Write per-prefix likelihood
+						for (int p = 0; p < likValues.size(); p++) {
+							fwPrefix.write(String.format("%d,%d,%e\n", t, p + 1, likValues.get(p)));
+						}
+
+						// Per-trace: final likelihood value
+						double finalLik = likValues.isEmpty() ? 0.0 : likValues.get(likValues.size() - 1);
+						double logLik = finalLik > 0 ? Math.log(finalLik) : Double.NEGATIVE_INFINITY;
+
+						fwLik.write(String.format("%d,%d,%e,%f\n", t, ctx.size(), finalLik, logLik));
+
+						if (finalLik > 0) {
+							totalLogLikelihood += logLik;
+							validTraces++;
+						}
 					}
-				}
-				try {
-					fw.close();
 				} catch (IOException e) {
+					System.err.println("ERROR writing likelihood output: " + e.getMessage());
 					e.printStackTrace();
 				}
+
+				// Aggregated output to stdout
+				System.out.println("=== LIKELIHOOD ANALYSIS ===");
+				System.out.println(String.format("Total traces: %d", inCtx.size()));
+				System.out.println(String.format("Traces with non-zero likelihood: %d", validTraces));
+				System.out.println(String.format("Aggregate log-likelihood: %f", totalLogLikelihood));
+				System.out.println(String.format("Per-trace output: %s", likFile.getAbsolutePath()));
+				System.out.println(String.format("Per-prefix output: %s", likPrefixFile.getAbsolutePath()));
+
 			} else if (fitVlmc.rnd) {
 				// genero una una nuova VLMC a partire dalla precedente sporcandone le
 				// probabilita'
