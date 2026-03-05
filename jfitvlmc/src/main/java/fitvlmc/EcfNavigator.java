@@ -15,9 +15,6 @@ public class EcfNavigator {
 
 	public static fitVlmc learner=null;
 	private VlmcRoot vlmc=null;
-	Integer exist=0;
-	Integer total=0;
-
 	// Depth limiting parameters
 	private int maxNavigationDepth = 25;  // Default depth limit
 

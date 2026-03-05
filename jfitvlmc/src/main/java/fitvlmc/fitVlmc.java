@@ -43,9 +43,8 @@ import com.sun.net.httpserver.HttpExchange;
 
 import com.github.lalyos.jfiglet.FigletFont;
 
-import java.io.IOException;
 import java.io.OutputStream;
-import java.net.InetSocketAddress; 
+import java.net.InetSocketAddress;
 
 @SuppressWarnings("restriction")
 public class fitVlmc {
