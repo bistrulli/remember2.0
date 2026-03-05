@@ -1,5 +1,7 @@
 package fitvlmc;
 
+import java.util.logging.Logger;
+
 import ECFEntity.Edge;
 import ECFEntity.Flow;
 
@@ -8,6 +10,8 @@ import ECFEntity.Flow;
  * Extracts ECF model generation logic from Trace2Ecf.java
  */
 public class Trace2EcfIntegrator {
+
+    private static final Logger LOGGER = Logger.getLogger(Trace2EcfIntegrator.class.getName());
 
     /**
      * Creates an ECF Flow model from trace content string - EXACT replica of Trace2Ecf.java algorithm
@@ -84,7 +88,7 @@ public class Trace2EcfIntegrator {
      * @return Flow object with validation checks
      */
     public static Flow createEcfFromContentWithValidation(String content) {
-        System.out.println("Generating ECF model using exact Trace2Ecf.java algorithm...");
+        LOGGER.info("Generating ECF model using exact Trace2Ecf.java algorithm...");
         Flow ecfModel = createEcfFromContent(content);
 
         // Validation checks
@@ -105,15 +109,15 @@ public class Trace2EcfIntegrator {
             }
         }
 
-        System.out.println("ECF Model Statistics:");
-        System.out.println("  - Total states: " + ecfModel.getEdges().size());
-        System.out.println("  - Start states (no incoming): " + edgesWithNoIn);
-        System.out.println("  - End states (no outgoing): " + edgesWithNoOut);
+        LOGGER.info("ECF Model Statistics:");
+        LOGGER.info("  - Total states: " + ecfModel.getEdges().size());
+        LOGGER.info("  - Start states (no incoming): " + edgesWithNoIn);
+        LOGGER.info("  - End states (no outgoing): " + edgesWithNoOut);
 
         // Check for end$ state specifically
         if (ecfModel.getEdges().containsKey("end$")) {
             Edge endState = ecfModel.getEdges().get("end$");
-            System.out.println("  - Terminal symbol 'end$' detected with " + endState.getIn().size() + " incoming connections");
+            LOGGER.info("  - Terminal symbol 'end$' detected with " + endState.getIn().size() + " incoming connections");
         }
 
         return ecfModel;

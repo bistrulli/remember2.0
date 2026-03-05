@@ -30,6 +30,7 @@ package suffixarray;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.logging.Logger;
 
 import vlmc.NextSymbolsDistribution;
 
@@ -62,6 +63,7 @@ import vlmc.NextSymbolsDistribution;
  * <i>Algorithms, 4th Edition</i> by Robert Sedgewick and Kevin Wayne.
  */
 public class SuffixArrayInt {
+	private static final Logger LOGGER = Logger.getLogger(SuffixArrayInt.class.getName());
 	private SuffixInt[] suffixes;
 	private int[] LCP;
 	private ArrayList<Integer> data=null;
@@ -81,7 +83,7 @@ public class SuffixArrayInt {
 			suffixes[i] = new SuffixInt(data, i);
 		}
 		this.sufDist=new ArrayList<ArrayList<NextSymbolsDistribution>>(n);
-		System.out.println("sorting suffixes");
+		LOGGER.fine("sorting suffixes");
 		Arrays.sort(suffixes);
 		this.LCP_LR=new int[this.length()];
 		

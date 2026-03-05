@@ -30,6 +30,7 @@ package suffixarray;
 
 import java.util.Arrays;
 import java.util.Random;
+import java.util.logging.Logger;
 
 /**
  * The {@code SuffixArray} class represents a suffix array of a string of length
@@ -60,6 +61,7 @@ import java.util.Random;
  * <i>Algorithms, 4th Edition</i> by Robert Sedgewick and Kevin Wayne.
  */
 public class SuffixArray {
+	private static final Logger LOGGER = Logger.getLogger(SuffixArray.class.getName());
 	private static final Random SHUFFLE_RNG = new Random();
 	private Suffix[] suffixes;
 	private int[] LCP;
@@ -83,7 +85,7 @@ public class SuffixArray {
 			suffixes[i] = temp;
 		}
 		
-		System.out.println("sorting suffixes");
+		LOGGER.fine("sorting suffixes");
 		Arrays.sort(suffixes);
 	}
 

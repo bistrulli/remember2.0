@@ -45,10 +45,12 @@ import com.github.lalyos.jfiglet.FigletFont;
 
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
+import java.util.logging.Logger;
 
 @SuppressWarnings("restriction")
 public class fitVlmc {
 
+	private static final Logger LOGGER = Logger.getLogger(fitVlmc.class.getName());
 	private Flow ecfModel = null;
 	private String content = null;
 	private SuffixArray sa = null;
@@ -90,7 +92,7 @@ public class fitVlmc {
 		if (likelihoodOnly) {
 			// No ECF needed — will load VLMC directly in the vlmcFile branch below
 		} else if (fitVlmc.ecfModelPath == null) {
-			System.out.println("No ECF model provided. Will generate ECF automatically from input traces.");
+			LOGGER.info("No ECF model provided. Will generate ECF automatically from input traces.");
 			learner.readInputTraces(); // Need to read traces first for auto-generation
 			learner.generateEcfFromTraces();
 		} else {
@@ -112,7 +114,7 @@ public class fitVlmc {
 		}
 		// fitVlmc.cutoff=fitVlmc.alfa;
 
-		System.out.println(cutoff);
+		LOGGER.fine("cutoff=" + cutoff);
 
 		if (fitVlmc.vlmcFile == null) {
 
@@ -120,22 +122,22 @@ public class fitVlmc {
 			if (fitVlmc.ecfModelPath != null) {
 				long startReading = System.currentTimeMillis();
 				learner.readInputTraces();
-				System.out.println(String.format("Reading time %dms", System.currentTimeMillis() - startReading));
+				LOGGER.info(String.format("Reading time %dms", System.currentTimeMillis() - startReading));
 			} else {
-				System.out.println("Traces already loaded for ECF generation.");
+				LOGGER.info("Traces already loaded for ECF generation.");
 			}
 
 			long startSA = System.currentTimeMillis();
 			learner.createSuffixArray();
 			long saTime = System.currentTimeMillis() - startSA;
-			System.out.println(String.format("Create suffix array time %dms", saTime));
+			LOGGER.info(String.format("Create suffix array time %dms", saTime));
 
 			long startFitVlmc = System.currentTimeMillis();
 			learner.fit();
 			long fitTime = System.currentTimeMillis() - startFitVlmc;
-			System.out.println(String.format("VLMC fitting time %dms", fitTime));
+			LOGGER.info(String.format("VLMC fitting time %dms", fitTime));
 
-			System.out.println(String.format("Total:=%dms", fitTime + saTime));
+			LOGGER.info(String.format("Total:=%dms", fitTime + saTime));
 
 			FileWriter vlmcWrite;
 			try {
@@ -147,8 +149,8 @@ public class fitVlmc {
 			}
 
 			learner.vlmc.computeOrder(0);
-			System.out.println(String.format("Order:=%d", VlmcRoot.order));
-			System.out.println(String.format("VLMC total nodes %d", learner.vlmc.nNodes));
+			LOGGER.info(String.format("Order:=%d", VlmcRoot.order));
+			LOGGER.info(String.format("VLMC total nodes %d", learner.vlmc.nNodes));
 		} else {
 			learner.vlmc = new VlmcRoot();
 			EcfNavigator ecfNav = new EcfNavigator(learner);
@@ -158,8 +160,8 @@ public class fitVlmc {
 
 			learner.vlmc.computeOrder(0);
 
-			System.out.println(String.format("Order:=%d", VlmcRoot.order));
-			System.out.println(String.format("VLMC total nodes %d", learner.vlmc.nNodes));
+			LOGGER.info(String.format("Order:=%d", VlmcRoot.order));
+			LOGGER.info(String.format("VLMC total nodes %d", learner.vlmc.nNodes));
 
 			if (fitVlmc.cmpLik != null) {
 
@@ -174,7 +176,7 @@ public class fitVlmc {
 							fitVlmc.csvTimestampColumn, fitVlmc.csvSeparator);
 					try {
 						inCtx = csvReader.readCsvAsTraces(ctxFile);
-						System.out.println("Loaded " + inCtx.size() + " traces from CSV for likelihood.");
+						LOGGER.info("Loaded " + inCtx.size() + " traces from CSV for likelihood.");
 					} catch (IOException e) {
 						System.err.println("ERROR reading CSV for likelihood: " + e.getMessage());
 						e.printStackTrace();
@@ -393,7 +395,7 @@ public class fitVlmc {
 
 		long startSimVlmc = System.currentTimeMillis();
 		ArrayList<ArrayList<String>> traces = learner.vlmc.simulate(nSim, learner);
-		System.out.println(String.format("VLMC simulation time %dms", System.currentTimeMillis() - startSimVlmc));
+		LOGGER.info(String.format("VLMC simulation time %dms", System.currentTimeMillis() - startSimVlmc));
 
 		File outFile;
 		if (fitVlmc.outFile != null) {
@@ -410,13 +412,13 @@ public class fitVlmc {
 
 		// Auto-detect CSV format
 		if (fitVlmc.isCsvOptionsSet() || CsvEventLogReader.isCsvFile(inFile)) {
-			System.out.println("Detected CSV event log format. Using CsvEventLogReader.");
+			LOGGER.info("Detected CSV event log format. Using CsvEventLogReader.");
 			CsvEventLogReader csvReader = new CsvEventLogReader(
 					fitVlmc.csvCaseColumn, fitVlmc.csvActivityColumn,
 					fitVlmc.csvTimestampColumn, fitVlmc.csvSeparator);
 			try {
 				this.content = csvReader.readCsv(inFile);
-				System.out.println("CSV parsed successfully. Trace content length: " + this.content.length());
+				LOGGER.info("CSV parsed successfully. Trace content length: " + this.content.length());
 			} catch (IOException e) {
 				System.err.println("ERROR reading CSV file: " + e.getMessage());
 				e.printStackTrace();
@@ -456,7 +458,7 @@ public class fitVlmc {
 	public void parseEcfModel() {
 		CharStream charStream = null;
 		try {
-			System.out.println(ecfModelPath);
+			LOGGER.fine("ECF model path: " + ecfModelPath);
 			charStream = CharStreams.fromPath(Paths.get(ecfModelPath));
 		} catch (IOException e1) {
 			e1.printStackTrace();
@@ -484,15 +486,15 @@ public class fitVlmc {
 			throw new RuntimeException("Cannot generate ECF: trace content is empty. Make sure to call readInputTraces() first.");
 		}
 
-		System.out.println("Generating ECF model from traces...");
+		LOGGER.info("Generating ECF model from traces...");
 		long startEcfGen = System.currentTimeMillis();
 
 		this.ecfModel = Trace2EcfIntegrator.createEcfFromContentWithValidation(this.content);
 
 		long ecfGenTime = System.currentTimeMillis() - startEcfGen;
-		System.out.println(String.format("ECF generation time: %dms", ecfGenTime));
+		LOGGER.info(String.format("ECF generation time: %dms", ecfGenTime));
 
-		System.out.println("ECF model generated successfully from input traces.");
+		LOGGER.info("ECF model generated successfully from input traces.");
 
 		// Save ECF model to file if requested
 		if (fitVlmc.ecfOutFile != null) {
@@ -505,11 +507,11 @@ public class fitVlmc {
 	 */
 	private void saveEcfModel(Flow ecfModel, String ecfOutFile) {
 		try {
-			System.out.println("Saving ECF model to: " + ecfOutFile);
+			LOGGER.info("Saving ECF model to: " + ecfOutFile);
 			FileWriter ecfWriter = new FileWriter(new File(ecfOutFile), StandardCharsets.UTF_8);
 			ecfWriter.write(ecfModel.toString());
 			ecfWriter.close();
-			System.out.println("ECF model saved successfully.");
+			LOGGER.info("ECF model saved successfully.");
 		} catch (IOException e) {
 			System.err.println("Failed to save ECF model: " + e.getMessage());
 			e.printStackTrace();

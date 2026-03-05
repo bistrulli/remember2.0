@@ -5,6 +5,7 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.logging.Logger;
 
 import ECFEntity.Edge;
 import vlmc.NextSymbolsDistribution;
@@ -13,6 +14,7 @@ import vlmc.VlmcRoot;
 
 public class EcfNavigator {
 
+	private static final Logger LOGGER = Logger.getLogger(EcfNavigator.class.getName());
 	public static fitVlmc learner=null;
 	private VlmcRoot vlmc=null;
 	// Depth limiting parameters
@@ -24,7 +26,7 @@ public class EcfNavigator {
 	 */
 	public void setMaxNavigationDepth(int maxDepth) {
 		this.maxNavigationDepth = maxDepth;
-		System.out.println("🔧 ECF Navigation max depth set to: " + maxDepth);
+		LOGGER.info("ECF Navigation max depth set to: " + maxDepth);
 	}
 	
 	public EcfNavigator(fitVlmc learner) {
@@ -50,7 +52,7 @@ public class EcfNavigator {
 			//System.out.println(String.format("Prune:%d", System.currentTimeMillis()-start));
 			this.vlmc.addChild(vn);
 			done++;
-			System.out.println(done/edges.size());
+			LOGGER.fine(String.format("Progress: %.2f", done/edges.size()));
 //			if(label==20)
 //				break;
 		}
