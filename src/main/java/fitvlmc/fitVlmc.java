@@ -32,6 +32,7 @@ import antlr.ECFLexer;
 import antlr.ECFParser;
 import gnu.getopt.Getopt;
 import gnu.getopt.LongOpt;
+import vlmc.NextSymbolsDistribution;
 import vlmc.VlmcNode;
 import vlmc.VlmcRoot;
 import com.sun.net.httpserver.HttpServer;
@@ -215,15 +216,44 @@ public class fitVlmc {
 
 					// Headers
 					fwLik.write("trace_id,trace_length,likelihood,log_likelihood\n");
-					fwPrefix.write("trace_id,prefix_length,likelihood\n");
+					fwPrefix.write("trace_id,prefix_length,likelihood,prefix,next_activity,possible_activities\n");
 
 					for (int t = 0; t < inCtx.size(); t++) {
 						ArrayList<String> ctx = inCtx.get(t);
 						ArrayList<Double> likValues = learner.vlmc.getLikelihood(ctx);
 
-						// Write per-prefix likelihood
+						// Write per-prefix likelihood with context details
+						// Replicate VLMC navigation to access node distributions
+						ArrayList<String> tmpCtx = new ArrayList<>(Arrays.asList(ctx.get(0)));
+						VlmcNode state = learner.vlmc.getState(tmpCtx);
 						for (int p = 0; p < likValues.size(); p++) {
-							fwPrefix.write(String.format("%d,%d,%e\n", t, p + 1, likValues.get(p)));
+							// Build prefix string (activities 0..p)
+							StringBuilder prefixSb = new StringBuilder();
+							for (int k = 0; k <= p; k++) {
+								if (k > 0) prefixSb.append(" ");
+								prefixSb.append(ctx.get(k));
+							}
+
+							// Next activity that determines this prefix's likelihood
+							String nextActivity = ctx.get(p + 1);
+
+							// Possible activities with P > 0 from current state
+							StringBuilder possibleSb = new StringBuilder();
+							NextSymbolsDistribution dist = state.getDist();
+							for (int s = 0; s < dist.getSymbols().size(); s++) {
+								if (possibleSb.length() > 0) possibleSb.append(";");
+								possibleSb.append(dist.getSymbols().get(s));
+								possibleSb.append(":");
+								possibleSb.append(String.format("%.4f", dist.getProbability().get(s)));
+							}
+
+							fwPrefix.write(String.format("%d,%d,%e,%s,%s,%s\n",
+									t, p + 1, likValues.get(p),
+									prefixSb.toString(), nextActivity, possibleSb.toString()));
+
+							// Advance navigation (same logic as getLikelihood)
+							tmpCtx.add(ctx.get(p + 1));
+							state = learner.vlmc.getState(tmpCtx);
 						}
 
 						// Per-trace: final likelihood value
