@@ -12,7 +12,9 @@ import java.io.UnsupportedEncodingException;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Random;
 
 import org.antlr.v4.runtime.BaseErrorListener;
@@ -240,11 +242,41 @@ public class fitVlmc {
 					e.printStackTrace();
 				}
 
+				// Compute uEMSC (unit Earth Mover's Stochastic Conformance)
+				// Group traces by content to get empirical frequencies L(t)
+				HashMap<String, Integer> traceCounts = new HashMap<>();
+				for (ArrayList<String> ctx : inCtx) {
+					String key = String.join(" ", ctx);
+					traceCounts.merge(key, 1, Integer::sum);
+				}
+				int totalTraces = inCtx.size();
+				int distinctTraces = traceCounts.size();
+
+				// For each distinct trace, compute L(t) and M(t), then surplus
+				double surplus = 0.0;
+				for (Map.Entry<String, Integer> entry : traceCounts.entrySet()) {
+					double lt = (double) entry.getValue() / totalTraces;
+
+					// Parse trace back and compute M(t)
+					String[] parts = entry.getKey().split(" ");
+					ArrayList<String> traceList = new ArrayList<>(Arrays.asList(parts));
+					ArrayList<Double> likValues = learner.vlmc.getLikelihood(traceList);
+					double mt = likValues.isEmpty() ? 0.0 : likValues.get(likValues.size() - 1);
+
+					double diff = lt - mt;
+					if (diff > 0) {
+						surplus += diff;
+					}
+				}
+				double uemsc = 1.0 - surplus;
+
 				// Aggregated output to stdout
 				System.out.println("=== LIKELIHOOD ANALYSIS ===");
 				System.out.println(String.format("Total traces: %d", inCtx.size()));
 				System.out.println(String.format("Traces with non-zero likelihood: %d", validTraces));
 				System.out.println(String.format("Aggregate log-likelihood: %f", totalLogLikelihood));
+				System.out.println(String.format("Distinct traces: %d", distinctTraces));
+				System.out.println(String.format("uEMSC (stochastic conformance): %f", uemsc));
 				System.out.println(String.format("Per-trace output: %s", likFile.getAbsolutePath()));
 				System.out.println(String.format("Per-prefix output: %s", likPrefixFile.getAbsolutePath()));
 				return; // Likelihood-only mode — done
