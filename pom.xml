@@ -31,6 +31,25 @@
 					<release>17</release>
 				</configuration>
 			</plugin>
+			<plugin>
+				<groupId>com.diffplug.spotless</groupId>
+				<artifactId>spotless-maven-plugin</artifactId>
+				<version>2.43.0</version>
+				<configuration>
+					<ratchetFrom>origin/main</ratchetFrom>
+					<java>
+						<excludes>
+							<exclude>src/main/java/antlr/**</exclude>
+							<exclude>src/main/java/ECFEntity/**</exclude>
+						</excludes>
+						<googleJavaFormat>
+							<version>1.22.0</version>
+							<style>AOSP</style>
+						</googleJavaFormat>
+						<removeUnusedImports/>
+					</java>
+				</configuration>
+			</plugin>
 		</plugins>
 	</build>
 </project>
