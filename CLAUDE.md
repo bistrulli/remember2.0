@@ -79,31 +79,31 @@ jfitVLMC/
 │       │   │   ├── GenerateEcfToFile.java   # ECF file output utility (standalone main)
 │       │   │   ├── SelfLoopRemover.java     # Self-loop removal from ECF graphs (standalone main)
 │       │   │   ├── DebugEcfComparison.java  # Debug utility per analisi ECF (standalone main)
-│       │   │   ├── TestAutoEcfGeneration.java # Test manuale generazione ECF (standalone main)
-│       │   │   └── test.java                # Classe test vuota (legacy)
+│       │   │   └── TestAutoEcfGeneration.java # Test manuale generazione ECF (standalone main)
 │       │   ├── vlmc/                        # VLMC data structures
 │       │   │   ├── VlmcRoot.java            # Root node, tree operations, serialization, simulation
 │       │   │   ├── VlmcNode.java            # Tree node: label, distribution, pruning, clone
-│       │   │   ├── VlmcInternalNode.java    # Internal node variant (vuoto, non usato)
 │       │   │   ├── NextSymbolsDistribution.java # Probability distribution + sampling
 │       │   │   └── vlmcWalker.java          # Visitor pattern interface (functional)
 │       │   └── suffixarray/                 # Pattern matching
 │       │       ├── SuffixArray.java         # String suffix array (Princeton-based)
 │       │       └── SuffixArrayInt.java      # Integer variant with LCP support
 │       └── test/java/test/
-│           ├── CsvEventLogReaderTest.java   # JUnit 5: CSV parsing, ordering, separators
-│           ├── LikelihoodTest.java          # JUnit 5: likelihood computation on hand-built VLMC
-│           ├── EcfNavigatorTest.java        # JUnit 5: ECF navigation and VLMC construction
-│           ├── PruningTest.java             # JUnit 5: statistical pruning (chi-square)
-│           ├── RESTVlmcTest.java            # JUnit 5: REST API handler
-│           ├── EndToEndTest.java            # JUnit 5: end-to-end pipeline (tag: e2e)
-│           ├── UemscTest.java               # JUnit 5: uEMSC stochastic conformance
-│           ├── VlmcNavigationTest.java      # JUnit 5: VLMC tree navigation
-│           ├── VlmcSerializationTest.java   # JUnit 5: VLMC model save/load
-│           ├── NextSymbolsDistributionTest.java # JUnit 5: probability distribution
-│           ├── SuffixArrayTest.java         # JUnit 5: suffix array operations
-│           ├── SaTest.java                  # Suffix array test (hardcoded path)
-│           └── SaTestInt.java               # Integer suffix array test
+│           ├── CsvEventLogReaderTest.java   # JUnit 5: CSV parsing, ordering, separators (10 test)
+│           ├── LikelihoodTest.java          # JUnit 5: likelihood, getState, DFS (11 test)
+│           ├── EcfNavigatorTest.java        # JUnit 5: ECF navigation and VLMC construction (3 test)
+│           ├── PruningTest.java             # JUnit 5: statistical pruning chi-square (11 test)
+│           ├── RESTVlmcTest.java            # JUnit 5: REST API handler (4 test)
+│           ├── EndToEndTest.java            # JUnit 5: end-to-end pipeline (4 test, tag: e2e)
+│           ├── UemscTest.java               # JUnit 5: uEMSC stochastic conformance (5 test)
+│           ├── VlmcNavigationTest.java      # JUnit 5: VLMC tree navigation (7 test)
+│           ├── VlmcSerializationTest.java   # JUnit 5: VLMC model save/load (4 test)
+│           ├── NextSymbolsDistributionTest.java # JUnit 5: probability distribution (6 test)
+│           ├── SuffixArrayTest.java         # JUnit 5: suffix array operations (9 test)
+│           ├── SuffixArrayIntTest.java      # JUnit 5: integer suffix array (8 test)
+│           ├── Trace2EcfIntegratorTest.java  # JUnit 5: ECF generation from traces (9 test)
+│           ├── SaTest.java                  # Suffix array test (hardcoded path, legacy)
+│           └── SaTestInt.java               # Integer suffix array test (legacy)
 ├── plan/                                    # Piani di implementazione
 ├── .github/
 │   └── workflows/
@@ -182,6 +182,10 @@ Alias: `java -jar jfitvlmc/target/jfitvlmc-1.0.0-SNAPSHOT-jar-with-dependencies.
 | `--csv-separator <char>` | REQUIRED_ARG | Separatore campi CSV (default: `,`) |
 | `-h, --help` | NO_ARG | Mostra help |
 
+### Bug noti
+
+- **`--pred` senza `--ecf`**: `--vlmc model.vlmc --pred --initCtx "A"` crasha con NPE perché tenta di generare ECF anche in prediction mode. Workaround: fornire anche `--ecf`. Issue: [#8](https://github.com/bistrulli/remember2.0/issues/8)
+
 ### Esempi
 
 ```bash
@@ -197,8 +201,8 @@ java -jar <JAR> --vlmc model.vlmc --lik data.csv --csv-case idars \
   --csv-activity activity --csv-timestamp timestamp
 # Output: .lik (per-trace), .lik.prefix (per-prefix con contesto), stdout (aggregati + uEMSC)
 
-# Predizione singola
-java -jar <JAR> --vlmc model.vlmc --pred --initCtx "state1 state2"
+# Predizione singola (richiede --ecf, vedi bug noti)
+java -jar <JAR> --vlmc model.vlmc --ecf model.ecf --pred --initCtx "state1 state2"
 
 # REST server
 java -jar <JAR> --vlmc model.vlmc --pred_rest 8080
@@ -228,15 +232,16 @@ La **uEMSC** (unit Earth Mover's Stochastic Conformance, Leemans et al. BPM 2019
 - **Naming**: `CamelCase` per classi, `camelCase` per metodi/variabili
 - **Package**: `fitvlmc` (core), `vlmc` (data structures), `suffixarray` (algorithms), `ECFEntity` (modulo ecf)
 - **Error handling**: eccezioni checked per I/O, unchecked per errori di programmazione
+- **Logging**: `java.util.logging` per debug/progress (non System.out.println). CLI user output resta su stdout.
 - **Nessun framework DI** — istanziazione diretta
 - **CLI**: java-getopt per parsing argomenti
 - **Statistiche**: Apache Commons Math 3.6.1 per chi-square e distribuzioni
 - **Parsing**: ANTLR 4.7.2 runtime per parsing ECF (nel modulo ecf)
 - **Utilities**: Apache Commons Lang 3.12.0 per StringUtils/ArrayUtils, jfiglet 0.0.9 per banner ASCII
 - **HTTP**: `com.sun.net.httpserver` (JDK built-in) per REST API
-- **Testing**: JUnit Jupiter 5.10.1 + maven-surefire-plugin 3.2.5
+- **Testing**: JUnit Jupiter 5.10.1 + maven-surefire-plugin 3.2.5 (unit) + maven-failsafe-plugin 3.2.5 (e2e)
 - **Formatting**: Spotless con Google Java Format (stile AOSP), ratchet da `origin/main`
-- **Coverage**: JaCoCo con minimo 25% line coverage
+- **Coverage**: JaCoCo con minimo 35% line coverage (attuale: ~36.5%)
 - **Static analysis**: SpotBugs (effort Max, threshold High, failOnError true)
 
 ## Git Workflow
@@ -273,8 +278,9 @@ Triggerato su push a `main` e su pull request verso `main`.
 
 ### Testing
 
-- **Unit test**: `mvn test` (esegue tutti i test TRANNE quelli taggati `e2e`)
-- **E2E test**: `mvn verify` (esegue anche i test taggati `e2e` via Failsafe plugin)
+- **Unit test**: `mvn test` — 87 test (esegue tutti i test TRANNE quelli taggati `e2e`)
+- **E2E test**: `mvn verify` — include 4 test taggati `e2e` via Failsafe plugin
+- **Totale**: 91 test (87 unit + 4 e2e)
 - **Tag e2e**: usare `@Tag("e2e")` di JUnit 5 per test end-to-end
 
 ### Workflow agentico con git
