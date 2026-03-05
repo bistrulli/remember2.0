@@ -1,39 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <FindBugsFilter>
-	<!-- Exclude ANTLR generated code -->
-	<Match>
-		<Package name="antlr"/>
-	</Match>
-	<Match>
-		<Package name="ECFEntity"/>
-	</Match>
-	<!-- Legacy code: default encoding (FileWriter without charset) -->
-	<Match>
-		<Bug pattern="DM_DEFAULT_ENCODING"/>
-	</Match>
-	<!-- Legacy code: boxing to parse primitives -->
-	<Match>
-		<Bug pattern="DM_BOXED_PRIMITIVE_FOR_PARSING"/>
-	</Match>
-	<!-- Legacy standalone utilities (SelfLoopRemover, DebugEcfComparison) -->
+	<!-- Legacy standalone utilities excluded from main flow -->
 	<Match>
 		<Class name="fitvlmc.SelfLoopRemover"/>
 	</Match>
 	<Match>
 		<Class name="fitvlmc.DebugEcfComparison"/>
 	</Match>
-	<!-- Random used only once (legacy, acceptable in these contexts) -->
+	<!-- EcfNavigator uses static learner field intentionally for static helper methods -->
 	<Match>
-		<Bug pattern="DMI_RANDOM_USED_ONLY_ONCE"/>
-	</Match>
-	<!-- Integer reference comparison in legacy SuffixArrayInt -->
-	<Match>
-		<Class name="suffixarray.SuffixArrayInt"/>
-		<Bug pattern="RC_REF_COMPARISON"/>
-	</Match>
-	<!-- Null dereference in legacy CLI parsing (validated upstream) -->
-	<Match>
-		<Class name="fitvlmc.fitVlmc"/>
-		<Bug pattern="NP_NULL_ON_SOME_PATH"/>
+		<Class name="fitvlmc.EcfNavigator"/>
+		<Bug pattern="ST_WRITE_TO_STATIC_FROM_INSTANCE_METHOD"/>
 	</Match>
 </FindBugsFilter>
