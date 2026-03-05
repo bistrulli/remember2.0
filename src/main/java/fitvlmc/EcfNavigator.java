@@ -86,6 +86,9 @@ public class EcfNavigator {
 		//creo la next symbol distribution
 		vn.setDist(createNextSymbolDistribution(ctx_new));
 
+		// Depth limit check — return leaf node (with distribution) if max depth reached
+		if (depth >= maxNavigationDepth) return vn;
+
 		ArrayList<String> toVisit = new ArrayList<String>(1);
 		toVisit.add(null);
 		toVisit.addAll(1, ctx_new);
@@ -184,14 +187,23 @@ public class EcfNavigator {
 			dist.getSymbols().add(e.getOut().get(0).getLabel());
 		}else {
 			//valuto i next symbols sempre relativi al contesto
+			double usedCtx = 0;
 			for (Edge outEdge : e.getOut()) {
 				ctxNew.set(LastId, outEdge.getLabel());
 				double count = new Integer(learner.getSa().count(String.join(" ",ctxNew))[1]).doubleValue();
 				if(count<=0) {
 					continue;
 				}
-				dist.getProbability().add(count/totalCtx);
+				usedCtx += count;
+				dist.getProbability().add(count);
 				dist.getSymbols().add(outEdge.getLabel());
+			}
+			// Normalize probabilities to sum to 1
+			if (usedCtx > 0) {
+				for (int i = 0; i < dist.getProbability().size(); i++) {
+					dist.getProbability().set(i, dist.getProbability().get(i) / usedCtx);
+				}
+				dist.totalCtx = usedCtx;
 			}
 		}
 		return dist;
