@@ -62,9 +62,11 @@ public class EndToEndTest {
 	}
 
 	private String runJar(String... args) throws IOException, InterruptedException {
-		// Find the fat JAR
-		File targetDir = new File("target");
-		File jar = new File(targetDir, "jfitvlmc-1.0.0-SNAPSHOT-jar-with-dependencies.jar");
+		// Find the fat JAR — check both multi-module and single-module paths
+		File jar = new File("jfitvlmc/target/jfitvlmc-1.0.0-SNAPSHOT-jar-with-dependencies.jar");
+		if (!jar.exists()) {
+			jar = new File("target/jfitvlmc-1.0.0-SNAPSHOT-jar-with-dependencies.jar");
+		}
 		Assumptions.assumeTrue(jar.exists(),
 			"Fat JAR not found — skip integration test. Build with 'mvn package -DskipTests' first.");
 

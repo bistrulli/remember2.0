@@ -24,13 +24,6 @@ jobs:
           distribution: 'temurin'
           cache: maven
 
-      - name: Install ECF dependency
-        run: |
-          # ECF is a local dependency - for CI we need it available
-          # If ECF is in a separate repo, clone and install it here
-          # For now, skip if not available (tests that need it will be skipped)
-          echo "ECF dependency check - ensure it is installed in CI"
-
       - name: Compile
         run: mvn compile -q
 
