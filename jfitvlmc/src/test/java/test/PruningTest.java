@@ -219,4 +219,63 @@ public class PruningTest {
 		child.prune();
 		assertEquals(1, root.getChildren().size(), "Root children should never be pruned");
 	}
+
+	@Test
+	public void testKLSymmetricMissingSymbol() {
+		VlmcRoot root = new VlmcRoot();
+		root.setLabel("root");
+
+		VlmcNode parent = new VlmcNode();
+		parent.setLabel("parent");
+		parent.setDist(makeDist(new String[]{"A", "B"}, new double[]{0.8, 0.2}, 10));
+		parent.setParent(root);
+
+		// Child has C which parent doesn't have
+		VlmcNode child = new VlmcNode();
+		child.setLabel("child");
+		child.setDist(makeDist(new String[]{"A", "C"}, new double[]{0.5, 0.5}, 10));
+		child.setParent(parent);
+
+		double kl = child.KullbackLeibler();
+		assertTrue(Double.isInfinite(kl) && kl > 0,
+			"KL should be +Infinity when child has symbol C absent in parent");
+	}
+
+	@Test
+	public void testCopyConstructorPreservesDistribution() {
+		VlmcNode original = new VlmcNode();
+		original.setLabel("test");
+		original.setDist(makeDist(new String[]{"A", "B"}, new double[]{0.7, 0.3}, 50));
+
+		VlmcNode copy = new VlmcNode(original);
+
+		assertEquals("test", copy.getLabel());
+		assertNotNull(copy.getDist());
+		assertEquals(2, copy.getDist().getSymbols().size());
+		assertEquals("A", copy.getDist().getSymbols().get(0));
+		assertEquals("B", copy.getDist().getSymbols().get(1));
+		assertEquals(0.7, copy.getDist().getProbability().get(0), 1e-10);
+		assertEquals(0.3, copy.getDist().getProbability().get(1), 1e-10);
+		assertEquals(50, copy.getDist().totalCtx, 1e-10);
+	}
+
+	@Test
+	public void testClonePreservesDistribution() {
+		VlmcNode original = new VlmcNode();
+		original.setLabel("test");
+		original.setDist(makeDist(new String[]{"X", "Y"}, new double[]{0.4, 0.6}, 100));
+
+		VlmcNode clone = (VlmcNode) original.clone();
+
+		assertNotNull(clone.getDist());
+		assertEquals(2, clone.getDist().getSymbols().size());
+		assertEquals("X", clone.getDist().getSymbols().get(0));
+		assertEquals(0.4, clone.getDist().getProbability().get(0), 1e-10);
+		assertEquals(0.6, clone.getDist().getProbability().get(1), 1e-10);
+		assertEquals(100, clone.getDist().totalCtx, 1e-10);
+
+		// Verify deep copy (modifying clone doesn't affect original)
+		clone.getDist().getProbability().set(0, 0.9);
+		assertEquals(0.4, original.getDist().getProbability().get(0), 1e-10);
+	}
 }
