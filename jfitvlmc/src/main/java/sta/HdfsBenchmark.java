@@ -22,11 +22,17 @@ public class HdfsBenchmark {
     private final double trainRatio;
     private final double alfa;
     private final double[] betas;
+    private final double eta;
 
-    public HdfsBenchmark(double trainRatio, double alfa, double[] betas) {
+    public HdfsBenchmark(double trainRatio, double alfa, double[] betas, double eta) {
         this.trainRatio = trainRatio;
         this.alfa = alfa;
         this.betas = betas;
+        this.eta = eta;
+    }
+
+    public HdfsBenchmark(double trainRatio, double alfa, double[] betas) {
+        this(trainRatio, alfa, betas, 0.05);
     }
 
     public HdfsBenchmark() {
@@ -102,6 +108,13 @@ public class HdfsBenchmark {
             results.put(String.format("STA beta=%.2f", beta), staBm.findBestF1());
         }
 
+        for (double beta : betas) {
+            List<BenchmarkMetrics.ScoredTrace> onlineScores =
+                    scoreWithStaOnline(vlmc, testAll, beta, eta);
+            BenchmarkMetrics onlineBm = new BenchmarkMetrics(onlineScores);
+            results.put(String.format("BMA beta=%.2f", beta), onlineBm.findBestF1());
+        }
+
         return new BenchmarkResult(
                 vlmc,
                 results,
@@ -160,6 +173,40 @@ public class HdfsBenchmark {
                 String next = events.get(t + 1);
                 StaResult result = sta.predict(vlmc, history);
                 double score = result.getAnomalyScore(next);
+                if (Double.isInfinite(score)) {
+                    totalScore = Double.POSITIVE_INFINITY;
+                    break;
+                }
+                totalScore += score;
+            }
+            if (Double.isFinite(totalScore)) {
+                totalScore /= nSteps;
+            }
+            scored.add(
+                    new BenchmarkMetrics.ScoredTrace(
+                            session.blockId, totalScore, session.isAnomaly));
+        }
+        return scored;
+    }
+
+    public List<BenchmarkMetrics.ScoredTrace> scoreWithStaOnline(
+            VlmcRoot vlmc, List<HdfsSession> sessions, double beta, double eta) {
+        StaPredictor sta = new StaPredictor(beta);
+        List<BenchmarkMetrics.ScoredTrace> scored = new ArrayList<>();
+
+        for (HdfsSession session : sessions) {
+            List<String> events = session.events;
+            int nSteps = events.size() - 1;
+            if (nSteps <= 0) {
+                scored.add(
+                        new BenchmarkMetrics.ScoredTrace(session.blockId, 0.0, session.isAnomaly));
+                continue;
+            }
+            List<StaResult> onlineResults = sta.predictOnline(vlmc, events, eta);
+            double totalScore = 0.0;
+            for (int t = 0; t < onlineResults.size(); t++) {
+                String next = events.get(t + 1);
+                double score = onlineResults.get(t).getAnomalyScore(next);
                 if (Double.isInfinite(score)) {
                     totalScore = Double.POSITIVE_INFINITY;
                     break;

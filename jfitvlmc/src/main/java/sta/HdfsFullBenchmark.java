@@ -16,6 +16,7 @@ public class HdfsFullBenchmark {
         String rawLogPath = null;
         String labelsPath = null;
         double alfa = 0.01;
+        double eta = 0.05;
         String outputPath = null;
         String vlmcModelPath = null;
         String saveVlmcPath = null;
@@ -42,6 +43,9 @@ public class HdfsFullBenchmark {
                     break;
                 case "--save-vlmc":
                     saveVlmcPath = args[++i];
+                    break;
+                case "--eta":
+                    eta = Double.parseDouble(args[++i]);
                     break;
                 default:
                     System.err.println("Unknown option: " + args[i]);
@@ -110,7 +114,7 @@ public class HdfsFullBenchmark {
         }
 
         double[] betas = {0.01, 0.1, 0.5, 1.0, 2.0, 5.0, 10.0, 50.0};
-        HdfsBenchmark benchmark = new HdfsBenchmark(0.8, alfa, betas);
+        HdfsBenchmark benchmark = new HdfsBenchmark(0.8, alfa, betas, eta);
 
         File workDir = new File(System.getProperty("java.io.tmpdir"), "hdfs_benchmark");
         workDir.mkdirs();
@@ -129,7 +133,8 @@ public class HdfsFullBenchmark {
             System.out.println("VLMC model saved to: " + saveVlmcPath);
         }
 
-        System.out.printf("Benchmark completed in %.1f seconds%n%n", elapsed / 1000.0);
+        System.out.printf(
+                "Benchmark completed in %.1f seconds (eta=%.4f)%n%n", elapsed / 1000.0, eta);
         System.out.println(benchmark.formatReport(result));
 
         AutoBetaSelector selector = new AutoBetaSelector();
@@ -179,5 +184,6 @@ public class HdfsFullBenchmark {
         System.err.println("  [--output <path>]        Output CSV path");
         System.err.println("  [--vlmc-model <path>]    Load pre-trained VLMC (skip training)");
         System.err.println("  [--save-vlmc <path>]     Save trained VLMC model to file");
+        System.err.println("  [--eta <value>]          BMA fixed-share parameter (default: 0.05)");
     }
 }
