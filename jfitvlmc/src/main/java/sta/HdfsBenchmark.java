@@ -23,12 +23,19 @@ public class HdfsBenchmark {
     private final double alfa;
     private final double[] betas;
     private final double eta;
+    private final String datasetName;
 
-    public HdfsBenchmark(double trainRatio, double alfa, double[] betas, double eta) {
+    public HdfsBenchmark(
+            double trainRatio, double alfa, double[] betas, double eta, String datasetName) {
         this.trainRatio = trainRatio;
         this.alfa = alfa;
         this.betas = betas;
         this.eta = eta;
+        this.datasetName = datasetName;
+    }
+
+    public HdfsBenchmark(double trainRatio, double alfa, double[] betas, double eta) {
+        this(trainRatio, alfa, betas, eta, "HDFS");
     }
 
     public HdfsBenchmark(double trainRatio, double alfa, double[] betas) {
@@ -253,7 +260,7 @@ public class HdfsBenchmark {
     public String formatReport(BenchmarkResult result) {
         StringBuilder sb = new StringBuilder();
         sb.append("========================================\n");
-        sb.append("HDFS Benchmark — STA vs VLMC vs DeepLog\n");
+        sb.append(datasetName).append(" Benchmark — STA vs VLMC vs DeepLog\n");
         sb.append("========================================\n\n");
 
         sb.append(String.format("Training: %d normal sessions%n", result.nTraining));
