@@ -52,13 +52,11 @@ public class Trace2EcfIntegrator {
                 if ((e = ecfModel.getEdges().get(s)) == null) {
                     e = new Edge(String.valueOf(s));
                     if (s.split("_").length > 1) {
-                        String[] p = null;
+                        String[] p = s.split("_");
                         try {
-                            p = s.split("_");
                             e.setCost(Integer.valueOf(p[p.length - 1].replace("$", "")));
-                        } catch (java.lang.NumberFormatException excep) {
-                            System.err.println(s);
-                            excep.printStackTrace();
+                        } catch (NumberFormatException excep) {
+                            // Non-numeric suffix (e.g. activity names) — cost stays 0
                         }
                     }
                     ecfModel.addEdge(e);
