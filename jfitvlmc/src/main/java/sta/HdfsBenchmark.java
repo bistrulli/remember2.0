@@ -138,7 +138,14 @@ public class HdfsBenchmark {
         for (HdfsSession session : sessions) {
             double totalScore = 0.0;
             List<String> events = session.events;
-            for (int t = 0; t < events.size() - 1; t++) {
+            int nSteps = events.size() - 1;
+            if (nSteps <= 0) {
+                scored.add(
+                        new BenchmarkMetrics.ScoredTrace(
+                                session.blockId, 0.0, session.isAnomaly));
+                continue;
+            }
+            for (int t = 0; t < nSteps; t++) {
                 List<String> history = events.subList(0, t + 1);
                 String next = events.get(t + 1);
                 StaResult result = sta.predict(vlmc, history);
@@ -148,6 +155,9 @@ public class HdfsBenchmark {
                     break;
                 }
                 totalScore += score;
+            }
+            if (Double.isFinite(totalScore)) {
+                totalScore /= nSteps;
             }
             scored.add(
                     new BenchmarkMetrics.ScoredTrace(
@@ -162,13 +172,21 @@ public class HdfsBenchmark {
 
         for (HdfsSession session : sessions) {
             ArrayList<String> events = new ArrayList<>(session.events);
-            ArrayList<Double> lik = vlmc.getLikelihood(events);
+            int nSteps = events.size() - 1;
             double totalScore;
-            if (lik.isEmpty()) {
-                totalScore = Double.POSITIVE_INFINITY;
+            if (nSteps <= 0) {
+                totalScore = 0.0;
             } else {
-                double finalLik = lik.get(lik.size() - 1);
-                totalScore = finalLik > 0 ? -Math.log(finalLik) : Double.POSITIVE_INFINITY;
+                ArrayList<Double> lik = vlmc.getLikelihood(events);
+                if (lik.isEmpty()) {
+                    totalScore = Double.POSITIVE_INFINITY;
+                } else {
+                    double finalLik = lik.get(lik.size() - 1);
+                    totalScore =
+                            finalLik > 0
+                                    ? -Math.log(finalLik) / nSteps
+                                    : Double.POSITIVE_INFINITY;
+                }
             }
             scored.add(
                     new BenchmarkMetrics.ScoredTrace(
