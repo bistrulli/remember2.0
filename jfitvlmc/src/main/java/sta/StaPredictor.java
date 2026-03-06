@@ -13,11 +13,18 @@ public class StaPredictor {
     private final double beta;
     private final StaWeightFunction weightFunction;
     private final boolean includeRoot;
+    private final double epsilon;
 
-    public StaPredictor(double beta, StaWeightFunction weightFunction, boolean includeRoot) {
+    public StaPredictor(
+            double beta, StaWeightFunction weightFunction, boolean includeRoot, double epsilon) {
         this.beta = beta;
         this.weightFunction = weightFunction;
         this.includeRoot = includeRoot;
+        this.epsilon = epsilon;
+    }
+
+    public StaPredictor(double beta, StaWeightFunction weightFunction, boolean includeRoot) {
+        this(beta, weightFunction, includeRoot, 1e-10);
     }
 
     public StaPredictor(double beta) {
@@ -85,6 +92,7 @@ public class StaPredictor {
             mixed.getProbability().add(mixedProb);
         }
 
+        applyEpsilonFloor(mixed);
         normalize(mixed);
         return mixed;
     }
@@ -185,5 +193,17 @@ public class StaPredictor {
 
     public double getBeta() {
         return beta;
+    }
+
+    public double getEpsilon() {
+        return epsilon;
+    }
+
+    private void applyEpsilonFloor(NextSymbolsDistribution dist) {
+        for (int i = 0; i < dist.getProbability().size(); i++) {
+            if (dist.getProbability().get(i) < epsilon) {
+                dist.getProbability().set(i, epsilon);
+            }
+        }
     }
 }
