@@ -86,8 +86,7 @@ public class BglFullBenchmark {
             VlmcRoot.nNodes = 0;
             preloaded.parseVLMC(vlmcModelPath);
             preloaded.computeOrder(0);
-            System.out.printf(
-                    "Loaded VLMC: %d nodes, order %d%n", VlmcRoot.nNodes, VlmcRoot.order);
+            System.out.printf("Loaded VLMC: %d nodes, order %d%n", VlmcRoot.nNodes, VlmcRoot.order);
         }
 
         double[] betas = {0.01, 0.1, 0.5, 1.0, 2.0, 5.0, 10.0, 50.0};
