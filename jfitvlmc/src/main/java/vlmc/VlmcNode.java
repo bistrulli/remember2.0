@@ -13,6 +13,7 @@ public class VlmcNode implements Cloneable {
 	private NextSymbolsDistribution dist = null;
 	protected ArrayList<VlmcNode> children = null;
 	private VlmcNode parent = null;
+	private Double cachedKL = null;
 
 	public VlmcNode() {
 		this.children = new ArrayList<VlmcNode>();
@@ -27,6 +28,7 @@ public class VlmcNode implements Cloneable {
 		}
 		this.label = node.getLabel();
 		this.dist = copyDist(node.dist);
+		this.cachedKL = null;
 	}
 
 	private static NextSymbolsDistribution copyDist(NextSymbolsDistribution src) {
@@ -150,7 +152,10 @@ public class VlmcNode implements Cloneable {
 	}
 
 	public double KullbackLeibler() {
-		double KullbackLeibler = 0.0;
+		if (cachedKL != null) {
+			return cachedKL;
+		}
+		double kl = 0.0;
 		for (String symbol : this.getDist().symbols) {
 			Double pChild = this.dist.getProbBySymbol(symbol);
 			Double pParent = this.getParent().getDist().getProbBySymbol(symbol);
@@ -158,11 +163,17 @@ public class VlmcNode implements Cloneable {
 				continue;
 			}
 			if (pParent == null || Math.abs(pParent) < 1e-15) {
-				return Double.POSITIVE_INFINITY;
+				cachedKL = Double.POSITIVE_INFINITY;
+				return cachedKL;
 			}
-			KullbackLeibler += pChild * Math.log(pChild / pParent);
+			kl += pChild * Math.log(pChild / pParent);
 		}
-		return KullbackLeibler;
+		cachedKL = kl;
+		return cachedKL;
+	}
+
+	public void invalidateKLCache() {
+		cachedKL = null;
 	}
 
 	public void prune() {
@@ -210,6 +221,7 @@ public class VlmcNode implements Cloneable {
 		}
 		node.children = new ArrayList<VlmcNode>();
 		node.dist = copyDist(this.dist);
+		node.cachedKL = null;
 		for (VlmcNode child : this.children) {
 			node.children.add((VlmcNode) child.clone());
 			node.children.get(node.children.size() - 1).setParent(node);
