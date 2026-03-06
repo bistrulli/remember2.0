@@ -54,6 +54,45 @@ public class StaAnomalyScorer {
         return new TraceScore(trace, staTotal, vlmcTotal, steps);
     }
 
+    public TraceScore scoreTraceOnline(List<String> trace) {
+        return scoreTraceOnline(trace, 0.05);
+    }
+
+    public TraceScore scoreTraceOnline(List<String> trace, double eta) {
+        List<StaResult> onlineResults = staPredictor.predictOnline(vlmc, trace, eta);
+
+        double staTotal = 0.0;
+        double vlmcTotal = 0.0;
+        List<StepDetail> steps = new ArrayList<>();
+
+        for (int t = 0; t < onlineResults.size(); t++) {
+            String nextSymbol = trace.get(t + 1);
+            StaResult staResult = onlineResults.get(t);
+            double staScore = staResult.getAnomalyScore(nextSymbol);
+
+            // VLMC classic score
+            List<String> history = trace.subList(0, t + 1);
+            VlmcNode classicNode = vlmc.getState(new ArrayList<>(history));
+            double vlmcScore = Double.POSITIVE_INFINITY;
+            if (classicNode.getDist() != null) {
+                Double prob = classicNode.getDist().getProbBySymbol(nextSymbol);
+                if (prob != null && prob > 0) {
+                    vlmcScore = -Math.log(prob);
+                }
+            }
+
+            steps.add(new StepDetail(t, nextSymbol, staScore, vlmcScore, staResult));
+
+            if (Double.isFinite(staScore)) staTotal += staScore;
+            else staTotal = Double.POSITIVE_INFINITY;
+
+            if (Double.isFinite(vlmcScore)) vlmcTotal += vlmcScore;
+            else vlmcTotal = Double.POSITIVE_INFINITY;
+        }
+
+        return new TraceScore(trace, staTotal, vlmcTotal, steps);
+    }
+
     public String formatTraceReport(List<String> trace) {
         TraceScore ts = scoreTrace(trace);
         StringBuilder sb = new StringBuilder();
