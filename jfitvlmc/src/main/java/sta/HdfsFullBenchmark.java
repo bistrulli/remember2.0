@@ -4,7 +4,10 @@ import fitvlmc.HdfsLogParser;
 import fitvlmc.HdfsLogParser.HdfsSession;
 import fitvlmc.HdfsRawLogParser;
 import java.io.File;
+import java.io.FileWriter;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
+import vlmc.VlmcRoot;
 
 public class HdfsFullBenchmark {
 
@@ -14,6 +17,8 @@ public class HdfsFullBenchmark {
         String labelsPath = null;
         double alfa = 0.01;
         String outputPath = null;
+        String vlmcModelPath = null;
+        String saveVlmcPath = null;
 
         for (int i = 0; i < args.length; i++) {
             switch (args[i]) {
@@ -31,6 +36,12 @@ public class HdfsFullBenchmark {
                     break;
                 case "--output":
                     outputPath = args[++i];
+                    break;
+                case "--vlmc-model":
+                    vlmcModelPath = args[++i];
+                    break;
+                case "--save-vlmc":
+                    saveVlmcPath = args[++i];
                     break;
                 default:
                     System.err.println("Unknown option: " + args[i]);
@@ -83,6 +94,22 @@ public class HdfsFullBenchmark {
                 "Loaded %d sessions (%d normal, %d anomalies)%n",
                 sessions.size(), normals, anomalies);
 
+        VlmcRoot preloaded = null;
+        if (vlmcModelPath != null) {
+            File vlmcFile = new File(vlmcModelPath);
+            if (!vlmcFile.exists()) {
+                System.err.println("VLMC model file not found: " + vlmcModelPath);
+                System.exit(1);
+            }
+            System.out.println("Loading pre-trained VLMC model...");
+            preloaded = new VlmcRoot();
+            preloaded.setLabel("root");
+            preloaded.parseVLMC(vlmcModelPath);
+            preloaded.computeOrder(0);
+            System.out.printf(
+                    "Loaded VLMC: %d nodes, order %d%n", VlmcRoot.nNodes, VlmcRoot.order);
+        }
+
         double[] betas = {0.01, 0.1, 0.5, 1.0, 2.0, 5.0, 10.0, 50.0};
         HdfsBenchmark benchmark = new HdfsBenchmark(0.8, alfa, betas);
 
@@ -91,8 +118,17 @@ public class HdfsFullBenchmark {
 
         System.out.println("Running benchmark...");
         long start = System.currentTimeMillis();
-        HdfsBenchmark.BenchmarkResult result = benchmark.run(sessions, workDir);
+        HdfsBenchmark.BenchmarkResult result = benchmark.run(sessions, workDir, preloaded);
         long elapsed = System.currentTimeMillis() - start;
+
+        if (saveVlmcPath != null && result.vlmc != null) {
+            File saveFile = new File(saveVlmcPath);
+            saveFile.getParentFile().mkdirs();
+            try (FileWriter fw = new FileWriter(saveFile, StandardCharsets.UTF_8)) {
+                fw.write(result.vlmc.toString(new String[] {""}));
+            }
+            System.out.println("VLMC model saved to: " + saveVlmcPath);
+        }
 
         System.out.printf("Benchmark completed in %.1f seconds%n%n", elapsed / 1000.0);
         System.out.println(benchmark.formatReport(result));
@@ -142,5 +178,7 @@ public class HdfsFullBenchmark {
         System.err.println("  --labels <path>          anomaly_label.csv");
         System.err.println("  [--alfa <value>]         Pruning alpha (default: 0.01)");
         System.err.println("  [--output <path>]        Output CSV path");
+        System.err.println("  [--vlmc-model <path>]    Load pre-trained VLMC (skip training)");
+        System.err.println("  [--save-vlmc <path>]     Save trained VLMC model to file");
     }
 }

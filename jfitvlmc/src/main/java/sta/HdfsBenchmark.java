@@ -61,6 +61,11 @@ public class HdfsBenchmark {
     }
 
     public BenchmarkResult run(List<HdfsSession> sessions, File workDir) throws Exception {
+        return run(sessions, workDir, null);
+    }
+
+    public BenchmarkResult run(List<HdfsSession> sessions, File workDir, VlmcRoot preloaded)
+            throws Exception {
         List<HdfsSession> normals = new ArrayList<>();
         List<HdfsSession> anomalies = new ArrayList<>();
         for (HdfsSession s : sessions) {
@@ -77,7 +82,13 @@ public class HdfsBenchmark {
         testAll.addAll(testNormals);
         testAll.addAll(anomalies);
 
-        VlmcRoot vlmc = trainVlmc(trainNormals, workDir);
+        VlmcRoot vlmc;
+        if (preloaded != null) {
+            vlmc = preloaded;
+            System.out.println("Using pre-loaded VLMC model (skipping training)");
+        } else {
+            vlmc = trainVlmc(trainNormals, workDir);
+        }
 
         Map<String, BenchmarkMetrics.MetricsResult> results = new LinkedHashMap<>();
 
