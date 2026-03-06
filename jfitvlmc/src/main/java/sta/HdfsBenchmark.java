@@ -152,8 +152,7 @@ public class HdfsBenchmark {
             int nSteps = events.size() - 1;
             if (nSteps <= 0) {
                 scored.add(
-                        new BenchmarkMetrics.ScoredTrace(
-                                session.blockId, 0.0, session.isAnomaly));
+                        new BenchmarkMetrics.ScoredTrace(session.blockId, 0.0, session.isAnomaly));
                 continue;
             }
             for (int t = 0; t < nSteps; t++) {
@@ -194,9 +193,7 @@ public class HdfsBenchmark {
                 } else {
                     double finalLik = lik.get(lik.size() - 1);
                     totalScore =
-                            finalLik > 0
-                                    ? -Math.log(finalLik) / nSteps
-                                    : Double.POSITIVE_INFINITY;
+                            finalLik > 0 ? -Math.log(finalLik) / nSteps : Double.POSITIVE_INFINITY;
                 }
             }
             scored.add(

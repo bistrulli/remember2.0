@@ -31,10 +31,8 @@ public class HdfsMiniTest {
     private static final String[][][] NORMAL_PATTERNS = {
         {
             {"E5", "E22", "E5", "E11", "E9", "E11", "E9", "E11", "E9", "E26", "E26", "E26"},
-            {"E5", "E22", "E5", "E5", "E11", "E9", "E11", "E9", "E11", "E9", "E26", "E26",
-                "E26"},
-            {"E5", "E22", "E5", "E11", "E9", "E11", "E9", "E11", "E9", "E26", "E26", "E26",
-                "E2"},
+            {"E5", "E22", "E5", "E5", "E11", "E9", "E11", "E9", "E11", "E9", "E26", "E26", "E26"},
+            {"E5", "E22", "E5", "E11", "E9", "E11", "E9", "E11", "E9", "E26", "E26", "E26", "E2"},
             {"E5", "E22", "E11", "E9", "E11", "E9", "E11", "E9", "E26", "E26", "E26"},
         },
         // Type 2: 2-replica write (20%)
@@ -149,8 +147,8 @@ public class HdfsMiniTest {
 
         // Training normals
         for (int i = 0; i < N_NORMAL_TRAIN; i++) {
-            String[] pattern = pickPattern(rng, NORMAL_PATTERNS, NORMAL_TYPE_WEIGHTS,
-                    NORMAL_VARIANT_WEIGHTS);
+            String[] pattern =
+                    pickPattern(rng, NORMAL_PATTERNS, NORMAL_TYPE_WEIGHTS, NORMAL_VARIANT_WEIGHTS);
             HdfsSession s =
                     new HdfsSession("blk_normal_" + i, new ArrayList<>(Arrays.asList(pattern)));
             s.isAnomaly = false;
@@ -159,20 +157,23 @@ public class HdfsMiniTest {
 
         // Training anomalies
         for (int i = 0; i < N_ANOMALY_TRAIN; i++) {
-            String[] pattern = pickPattern(rng, ANOMALY_PATTERNS, ANOMALY_TYPE_WEIGHTS,
-                    ANOMALY_VARIANT_WEIGHTS);
-            HdfsSession s = new HdfsSession(
-                    "blk_anomaly_train_" + i, new ArrayList<>(Arrays.asList(pattern)));
+            String[] pattern =
+                    pickPattern(
+                            rng, ANOMALY_PATTERNS, ANOMALY_TYPE_WEIGHTS, ANOMALY_VARIANT_WEIGHTS);
+            HdfsSession s =
+                    new HdfsSession(
+                            "blk_anomaly_train_" + i, new ArrayList<>(Arrays.asList(pattern)));
             s.isAnomaly = true;
             allSessions.add(s);
         }
 
         // Test normals (same distribution as training)
         for (int i = 0; i < N_NORMAL_TEST; i++) {
-            String[] pattern = pickPattern(rng, NORMAL_PATTERNS, NORMAL_TYPE_WEIGHTS,
-                    NORMAL_VARIANT_WEIGHTS);
-            HdfsSession s = new HdfsSession(
-                    "blk_normal_test_" + i, new ArrayList<>(Arrays.asList(pattern)));
+            String[] pattern =
+                    pickPattern(rng, NORMAL_PATTERNS, NORMAL_TYPE_WEIGHTS, NORMAL_VARIANT_WEIGHTS);
+            HdfsSession s =
+                    new HdfsSession(
+                            "blk_normal_test_" + i, new ArrayList<>(Arrays.asList(pattern)));
             s.isAnomaly = false;
             allSessions.add(s);
         }
@@ -184,9 +185,10 @@ public class HdfsMiniTest {
         for (int v = 0; v < TEST_ANOMALY_VARIANTS.length; v++) {
             int n = perVariant + (v < remainder ? 1 : 0);
             for (int j = 0; j < n; j++) {
-                HdfsSession s = new HdfsSession(
-                        "blk_anomaly_test_" + idx,
-                        new ArrayList<>(Arrays.asList(TEST_ANOMALY_VARIANTS[v])));
+                HdfsSession s =
+                        new HdfsSession(
+                                "blk_anomaly_test_" + idx,
+                                new ArrayList<>(Arrays.asList(TEST_ANOMALY_VARIANTS[v])));
                 s.isAnomaly = true;
                 allSessions.add(s);
                 idx++;
@@ -243,8 +245,7 @@ public class HdfsMiniTest {
 
     @Test
     public void testStaImprovesOverVlmc() throws Exception {
-        HdfsBenchmark benchmark =
-                new HdfsBenchmark(0.8, 0.01, new double[] {0.5, 1.0, 2.0, 5.0});
+        HdfsBenchmark benchmark = new HdfsBenchmark(0.8, 0.01, new double[] {0.5, 1.0, 2.0, 5.0});
         HdfsBenchmark.BenchmarkResult result = benchmark.run(allSessions, tempDir);
 
         double vlmcF1 = result.results.get("VLMC classic").f1;
@@ -257,12 +258,10 @@ public class HdfsMiniTest {
             }
         }
 
-        System.out.printf(
-                "%nVLMC F1=%.4f, Best STA F1=%.4f (%s)%n", vlmcF1, bestStaF1, bestMethod);
+        System.out.printf("%nVLMC F1=%.4f, Best STA F1=%.4f (%s)%n", vlmcF1, bestStaF1, bestMethod);
         assertTrue(
                 bestStaF1 >= vlmcF1 * 0.95,
-                String.format(
-                        "STA (%.4f) should be comparable to VLMC (%.4f)", bestStaF1, vlmcF1));
+                String.format("STA (%.4f) should be comparable to VLMC (%.4f)", bestStaF1, vlmcF1));
     }
 
     @Test
