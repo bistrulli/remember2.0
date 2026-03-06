@@ -96,9 +96,19 @@ public class SuffixArray {
         }
         int nameCount = currentName + 1;
 
-        // Step 3: If not all names are unique, recurse
+        // Step 3: Determine sorted order of LMS suffixes
+        // Rebuild lmsPositions in text order
+        int[] lmsInTextOrder = new int[lmsPositions.length];
+        int li = 0;
+        for (int i = 0; i < n; i++) {
+            if (isLms(sType, i)) {
+                lmsInTextOrder[li++] = i;
+            }
+        }
+
+        int[] sortedLms;
         if (nameCount < lmsPositions.length) {
-            // Build reduced string
+            // Not all names unique — recurse on reduced string
             int[] reducedString = new int[lmsPositions.length];
             int ri = 0;
             for (int i = 0; i < n; i++) {
@@ -107,27 +117,24 @@ public class SuffixArray {
                 }
             }
 
-            // Recurse
             int[] reducedSa = sais(reducedString, reducedString.length, nameCount);
 
-            // Map back to original LMS positions
-            // Rebuild lmsPositions in text order
-            int[] lmsInTextOrder = new int[lmsPositions.length];
-            int li = 0;
-            for (int i = 0; i < n; i++) {
-                if (isLms(sType, i)) {
-                    lmsInTextOrder[li++] = i;
-                }
-            }
-
-            int[] sortedLms = new int[lmsPositions.length];
+            sortedLms = new int[lmsPositions.length];
             for (int i = 0; i < reducedSa.length; i++) {
                 sortedLms[i] = lmsInTextOrder[reducedSa[i]];
             }
-
-            // Final induced sort with correctly ordered LMS
-            inducedSort(t, sa, sType, sortedLms, bucketSizes, bucketStarts, alphabetSize, n);
+        } else {
+            // All names unique — sort LMS directly by name
+            sortedLms = new int[lmsPositions.length];
+            for (int i = 0; i < n; i++) {
+                if (names[i] >= 0) {
+                    sortedLms[names[i]] = i;
+                }
+            }
         }
+
+        // Final induced sort with correctly ordered LMS (always needed)
+        inducedSort(t, sa, sType, sortedLms, bucketSizes, bucketStarts, alphabetSize, n);
 
         return sa;
     }
