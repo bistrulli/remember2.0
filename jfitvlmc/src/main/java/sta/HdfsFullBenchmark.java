@@ -2,6 +2,7 @@ package sta;
 
 import fitvlmc.HdfsLogParser;
 import fitvlmc.HdfsLogParser.HdfsSession;
+import fitvlmc.HdfsRawLogParser;
 import java.io.File;
 import java.util.List;
 
@@ -9,6 +10,7 @@ public class HdfsFullBenchmark {
 
     public static void main(String[] args) throws Exception {
         String structuredLogPath = null;
+        String rawLogPath = null;
         String labelsPath = null;
         double alfa = 0.01;
         String outputPath = null;
@@ -17,6 +19,9 @@ public class HdfsFullBenchmark {
             switch (args[i]) {
                 case "--structured-log":
                     structuredLogPath = args[++i];
+                    break;
+                case "--raw-log":
+                    rawLogPath = args[++i];
                     break;
                 case "--labels":
                     labelsPath = args[++i];
@@ -34,27 +39,40 @@ public class HdfsFullBenchmark {
             }
         }
 
-        if (structuredLogPath == null || labelsPath == null) {
+        if ((structuredLogPath == null && rawLogPath == null) || labelsPath == null) {
             printUsage();
             System.exit(1);
         }
 
-        File structuredLog = new File(structuredLogPath);
         File labelsFile = new File(labelsPath);
-
-        if (!structuredLog.exists()) {
-            System.err.println("Structured log file not found: " + structuredLogPath);
-            System.exit(1);
-        }
         if (!labelsFile.exists()) {
             System.err.println("Labels file not found: " + labelsPath);
             System.exit(1);
         }
 
-        System.out.println("Loading HDFS dataset...");
-        HdfsLogParser parser = new HdfsLogParser();
-        List<HdfsSession> sessions = parser.parseStructuredLog(structuredLog);
-        parser.loadLabels(labelsFile, sessions);
+        List<HdfsSession> sessions;
+        if (rawLogPath != null) {
+            File rawLog = new File(rawLogPath);
+            if (!rawLog.exists()) {
+                System.err.println("Raw log file not found: " + rawLogPath);
+                System.exit(1);
+            }
+            System.out.println("Parsing raw HDFS log (this may take a few minutes)...");
+            HdfsRawLogParser rawParser = new HdfsRawLogParser();
+            sessions = rawParser.parseRawLog(rawLog);
+        } else {
+            File structuredLog = new File(structuredLogPath);
+            if (!structuredLog.exists()) {
+                System.err.println("Structured log file not found: " + structuredLogPath);
+                System.exit(1);
+            }
+            System.out.println("Loading HDFS structured CSV...");
+            HdfsLogParser parser = new HdfsLogParser();
+            sessions = parser.parseStructuredLog(structuredLog);
+        }
+
+        HdfsLogParser labelParser = new HdfsLogParser();
+        labelParser.loadLabels(labelsFile, sessions);
 
         int normals = 0, anomalies = 0;
         for (HdfsSession s : sessions) {
@@ -119,7 +137,8 @@ public class HdfsFullBenchmark {
 
     private static void printUsage() {
         System.err.println("Usage: HdfsFullBenchmark");
-        System.err.println("  --structured-log <path>  HDFS.log_structured.csv");
+        System.err.println("  --raw-log <path>         HDFS.log (raw log, parsed automatically)");
+        System.err.println("  --structured-log <path>  HDFS.log_structured.csv (alternative)");
         System.err.println("  --labels <path>          anomaly_label.csv");
         System.err.println("  [--alfa <value>]         Pruning alpha (default: 0.01)");
         System.err.println("  [--output <path>]        Output CSV path");

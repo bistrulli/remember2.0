@@ -109,7 +109,7 @@ public class HdfsBenchmark {
         resetFitVlmcStatics();
         fitVlmc.alfa = (float) alfa;
         fitVlmc.k = 1;
-        fitVlmc.maxNavigationDepth = 25;
+        fitVlmc.maxNavigationDepth = 50;
 
         fitVlmc learner = new fitVlmc();
         setStaticField("inFile", tracesFile.getAbsolutePath());
@@ -237,7 +237,7 @@ public class HdfsBenchmark {
         fitVlmc.k = -1;
         fitVlmc.alfa = null;
         fitVlmc.cutoff = -1;
-        fitVlmc.maxNavigationDepth = 25;
+        fitVlmc.maxNavigationDepth = 100;
         VlmcRoot.order = -1;
         VlmcRoot.nNodes = -1;
         VlmcRoot.nLeaves = -1;
