@@ -5,9 +5,11 @@ import static org.junit.jupiter.api.Assertions.*;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Locale;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -184,5 +186,141 @@ public class VlmcSerializationTest {
 			assertEquals(likOriginal.get(i), likLoaded.get(i), 1e-6,
 				"Likelihood mismatch at step " + i);
 		}
+	}
+
+	@Test
+	public void testComprehensiveRoundTrip() throws IOException {
+		// Build a multi-level VLMC: root -> {A, B}, A -> {C, D}, C -> {E}
+		VlmcRoot original = buildDeepVlmc();
+
+		// Add D under A
+		VlmcNode nodeA = original.getChidByLabel("A");
+		VlmcNode nodeDA = new VlmcNode();
+		nodeDA.setLabel("D");
+		NextSymbolsDistribution distDA = new NextSymbolsDistribution();
+		distDA.getSymbols().addAll(Arrays.asList("A", "B", "end$"));
+		distDA.getProbability().addAll(Arrays.asList(0.5, 0.3, 0.2));
+		distDA.totalCtx = 20;
+		nodeDA.setDist(distDA);
+		nodeDA.setParent(nodeA);
+		nodeA.getChildren().add(nodeDA);
+
+		// Add E under C (depth 3)
+		VlmcNode nodeC = nodeA.getChidByLabel("C");
+		VlmcNode nodeEC = new VlmcNode();
+		nodeEC.setLabel("E");
+		NextSymbolsDistribution distEC = new NextSymbolsDistribution();
+		distEC.getSymbols().addAll(Arrays.asList("B", "A"));
+		distEC.getProbability().addAll(Arrays.asList(0.9, 0.1));
+		distEC.totalCtx = 3;
+		nodeEC.setDist(distEC);
+		nodeEC.setParent(nodeC);
+		nodeC.getChildren().add(nodeEC);
+
+		// Count nodes in original
+		int expectedNodeCount = countNodes(original);
+
+		// Step 1: Save
+		File file1 = new File(tempDir, "model1.vlmc");
+		try (FileWriter fw = new FileWriter(file1)) {
+			fw.write(original.toString(new String[]{""}));
+		}
+
+		// Step 2: Load and verify structure
+		VlmcRoot loaded = new VlmcRoot();
+		loaded.setLabel("root");
+		VlmcRoot.nNodes = 0;
+		loaded.parseVLMC(file1.getAbsolutePath());
+		int loadedNodeCount = VlmcRoot.nNodes;
+
+		assertEquals(expectedNodeCount, loadedNodeCount,
+			"Node count should match after load");
+
+		// Verify order
+		VlmcRoot.order = -1;
+		loaded.computeOrder(0);
+		assertTrue(VlmcRoot.order >= 3,
+			"Order should be at least 3 (root->A->C->E), got " + VlmcRoot.order);
+
+		// Verify every node has a distribution with correct content
+		assertAllDistributionsPresent(original, loaded);
+
+		// Step 3: Save loaded model to second file
+		File file2 = new File(tempDir, "model2.vlmc");
+		try (FileWriter fw = new FileWriter(file2)) {
+			fw.write(loaded.toString(new String[]{""}));
+		}
+
+		// Step 4: Compare files — they should be identical
+		String content1 = new String(Files.readAllBytes(file1.toPath()));
+		String content2 = new String(Files.readAllBytes(file2.toPath()));
+		assertEquals(content1, content2,
+			"Re-serialized model file should be identical to original");
+	}
+
+	@Test
+	public void testRoundTripWithItalianLocale() throws IOException {
+		// Temporarily set Italian locale (uses comma as decimal separator)
+		Locale.setDefault(Locale.ITALY);
+
+		VlmcRoot original = buildDeepVlmc();
+
+		// Save with Italian locale — should still use dots (Locale.US in toString)
+		File file1 = new File(tempDir, "italian1.vlmc");
+		try (FileWriter fw = new FileWriter(file1)) {
+			fw.write(original.toString(new String[]{""}));
+		}
+
+		// Verify file content uses dots, not commas
+		String content = new String(Files.readAllBytes(file1.toPath()));
+		assertFalse(content.contains("[0,"),
+			"Serialized output should use dot decimals even with Italian locale");
+		assertTrue(content.contains("[0."),
+			"Serialized output should contain dot decimal probabilities");
+
+		// Load back and verify
+		VlmcRoot loaded = new VlmcRoot();
+		loaded.setLabel("root");
+		VlmcRoot.nNodes = 0;
+		loaded.parseVLMC(file1.getAbsolutePath());
+
+		// Verify distributions match
+		assertAllDistributionsPresent(original, loaded);
+
+		// Re-save and compare
+		File file2 = new File(tempDir, "italian2.vlmc");
+		try (FileWriter fw = new FileWriter(file2)) {
+			fw.write(loaded.toString(new String[]{""}));
+		}
+
+		String content1 = new String(Files.readAllBytes(file1.toPath()));
+		String content2 = new String(Files.readAllBytes(file2.toPath()));
+		assertEquals(content1, content2,
+			"Round-trip under Italian locale should produce identical files");
+	}
+
+	private int countNodes(VlmcRoot root) {
+		AtomicInteger count = new AtomicInteger(0);
+		root.DFS(node -> count.incrementAndGet());
+		return count.get();
+	}
+
+	private void assertAllDistributionsPresent(VlmcRoot expected, VlmcRoot actual) {
+		// DFS through expected, find corresponding node in actual, compare distributions
+		expected.DFS(origNode -> {
+			// Navigate to the same node in the loaded tree
+			ArrayList<String> ctx = origNode.getCtx();
+			VlmcNode loadedNode = actual;
+			for (int i = ctx.size() - 1; i >= 0; i--) {
+				loadedNode = loadedNode.getChidByLabel(ctx.get(i));
+				assertNotNull(loadedNode,
+					"Missing node in loaded tree for context: " + ctx);
+			}
+			assertNotNull(loadedNode.getDist(),
+				"Distribution should not be null for node with context: " + ctx);
+			assertFalse(loadedNode.getDist().getSymbols().isEmpty(),
+				"Distribution should have symbols for node with context: " + ctx);
+			assertDistributionsEqual(origNode.getDist(), loadedNode.getDist(), 1e-5);
+		});
 	}
 }

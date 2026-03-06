@@ -1,6 +1,7 @@
 package vlmc;
 
 import java.util.ArrayList;
+import java.util.Locale;
 
 import org.apache.commons.math3.distribution.EnumeratedDistribution;
 import org.apache.commons.math3.random.MersenneTwister;
@@ -52,9 +53,9 @@ public class NextSymbolsDistribution {
 	public String toString() {
 		StringBuilder sb=new StringBuilder("");
 		for(int i=0; i<this.getProbability().size(); i++) {
-			sb.append(String.format("[%f,\"%s\"]", this.getProbability().get(i),this.getSymbols().get(i)));
+			sb.append(String.format(Locale.US, "[%f,\"%s\"]", this.getProbability().get(i),this.getSymbols().get(i)));
 		}
-		sb.append(String.format("-%d", Double.valueOf(this.totalCtx).intValue()));
+		sb.append(String.format(Locale.US, "-%d", Double.valueOf(this.totalCtx).intValue()));
 		return sb.toString();
 	}
 }
