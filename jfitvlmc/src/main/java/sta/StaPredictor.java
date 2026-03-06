@@ -188,9 +188,10 @@ public class StaPredictor {
                 double shareForNew = (newCount > 0) ? eta / k : 0.0;
                 double totalNew = shareForNew * newCount;
                 // Renormalize existing to make room for new contexts
-                double scale = (existingSum > 0 && totalNew < 1.0)
-                        ? (1.0 - totalNew) / existingSum
-                        : 1.0 / k;
+                double scale =
+                        (existingSum > 0 && totalNew < 1.0)
+                                ? (1.0 - totalNew) / existingSum
+                                : 1.0 / k;
                 for (Map.Entry<VlmcNode, Double> entry : newWeights.entrySet()) {
                     entry.setValue(entry.getValue() * scale);
                 }
@@ -237,9 +238,10 @@ public class StaPredictor {
             double[] pi = new double[k];
             for (int i = 0; i < k; i++) {
                 VlmcNode node = contexts.get(i);
-                Double prob = (node.getDist() != null)
-                        ? node.getDist().getProbBySymbol(nextSymbol)
-                        : null;
+                Double prob =
+                        (node.getDist() != null)
+                                ? node.getDist().getProbBySymbol(nextSymbol)
+                                : null;
                 pi[i] = (prob != null && prob > epsilon) ? prob : epsilon;
             }
 

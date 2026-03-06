@@ -37,9 +37,11 @@ public class VlmcNodeKLCacheTest {
         root.setDist(rootDist);
 
         VlmcNode parent =
-                createNodeWithDist("A", new String[] {"X", "Y"}, new double[] {0.5, 0.5}, 100, root);
+                createNodeWithDist(
+                        "A", new String[] {"X", "Y"}, new double[] {0.5, 0.5}, 100, root);
         VlmcNode child =
-                createNodeWithDist("B", new String[] {"X", "Y"}, new double[] {0.8, 0.2}, 50, parent);
+                createNodeWithDist(
+                        "B", new String[] {"X", "Y"}, new double[] {0.8, 0.2}, 50, parent);
 
         // Manual KL computation: 0.8*ln(0.8/0.5) + 0.2*ln(0.2/0.5)
         double expectedKL = 0.8 * Math.log(0.8 / 0.5) + 0.2 * Math.log(0.2 / 0.5);
@@ -62,9 +64,11 @@ public class VlmcNodeKLCacheTest {
         root.setDist(rootDist);
 
         VlmcNode parent =
-                createNodeWithDist("A", new String[] {"X", "Y"}, new double[] {0.5, 0.5}, 100, root);
+                createNodeWithDist(
+                        "A", new String[] {"X", "Y"}, new double[] {0.5, 0.5}, 100, root);
         VlmcNode child =
-                createNodeWithDist("B", new String[] {"X", "Y"}, new double[] {0.9, 0.1}, 50, parent);
+                createNodeWithDist(
+                        "B", new String[] {"X", "Y"}, new double[] {0.9, 0.1}, 50, parent);
 
         double val1 = child.KullbackLeibler();
         double val2 = child.KullbackLeibler();
@@ -86,9 +90,11 @@ public class VlmcNodeKLCacheTest {
         root.setDist(rootDist);
 
         VlmcNode parent =
-                createNodeWithDist("A", new String[] {"X", "Y"}, new double[] {0.5, 0.5}, 100, root);
+                createNodeWithDist(
+                        "A", new String[] {"X", "Y"}, new double[] {0.5, 0.5}, 100, root);
         VlmcNode child =
-                createNodeWithDist("B", new String[] {"X", "Y"}, new double[] {0.8, 0.2}, 50, parent);
+                createNodeWithDist(
+                        "B", new String[] {"X", "Y"}, new double[] {0.8, 0.2}, 50, parent);
 
         double before = child.KullbackLeibler();
 
@@ -113,9 +119,11 @@ public class VlmcNodeKLCacheTest {
         root.setDist(rootDist);
 
         VlmcNode parent =
-                createNodeWithDist("A", new String[] {"X", "Y"}, new double[] {0.5, 0.5}, 100, root);
+                createNodeWithDist(
+                        "A", new String[] {"X", "Y"}, new double[] {0.5, 0.5}, 100, root);
         VlmcNode child =
-                createNodeWithDist("B", new String[] {"X", "Y"}, new double[] {0.8, 0.2}, 50, parent);
+                createNodeWithDist(
+                        "B", new String[] {"X", "Y"}, new double[] {0.8, 0.2}, 50, parent);
 
         // Warm the cache
         child.KullbackLeibler();
@@ -141,9 +149,11 @@ public class VlmcNodeKLCacheTest {
         root.setDist(rootDist);
 
         VlmcNode parent =
-                createNodeWithDist("A", new String[] {"X", "Y"}, new double[] {0.5, 0.5}, 100, root);
+                createNodeWithDist(
+                        "A", new String[] {"X", "Y"}, new double[] {0.5, 0.5}, 100, root);
         VlmcNode child =
-                createNodeWithDist("B", new String[] {"X", "Y"}, new double[] {0.8, 0.2}, 50, parent);
+                createNodeWithDist(
+                        "B", new String[] {"X", "Y"}, new double[] {0.8, 0.2}, 50, parent);
 
         // Warm the cache
         child.KullbackLeibler();
@@ -167,10 +177,12 @@ public class VlmcNodeKLCacheTest {
         root.setDist(rootDist);
 
         VlmcNode parent =
-                createNodeWithDist("A", new String[] {"X", "Y"}, new double[] {1.0, 0.0}, 100, root);
+                createNodeWithDist(
+                        "A", new String[] {"X", "Y"}, new double[] {1.0, 0.0}, 100, root);
         // Child has P(Y)=0.5 but parent has P(Y)=0 → KL = +infinity
         VlmcNode child =
-                createNodeWithDist("B", new String[] {"X", "Y"}, new double[] {0.5, 0.5}, 50, parent);
+                createNodeWithDist(
+                        "B", new String[] {"X", "Y"}, new double[] {0.5, 0.5}, 50, parent);
 
         double kl1 = child.KullbackLeibler();
         double kl2 = child.KullbackLeibler();
@@ -190,10 +202,12 @@ public class VlmcNodeKLCacheTest {
         root.setDist(rootDist);
 
         VlmcNode parent =
-                createNodeWithDist("A", new String[] {"X", "Y"}, new double[] {0.6, 0.4}, 100, root);
+                createNodeWithDist(
+                        "A", new String[] {"X", "Y"}, new double[] {0.6, 0.4}, 100, root);
         // Same distribution as parent → KL = 0
         VlmcNode child =
-                createNodeWithDist("B", new String[] {"X", "Y"}, new double[] {0.6, 0.4}, 50, parent);
+                createNodeWithDist(
+                        "B", new String[] {"X", "Y"}, new double[] {0.6, 0.4}, 50, parent);
 
         double kl1 = child.KullbackLeibler();
         double kl2 = child.KullbackLeibler();

@@ -87,9 +87,9 @@ public class OnlineBmaTest {
      * +-- "A" — P(A)=0.9, P(C)=0.1          (n=500, no children)
      * </pre>
      *
-     * With trace [A, A, A, ...], collectMatchedContexts always returns [root, nodeA]
-     * because: history ends with "A" → matches nodeA, nodeA has no children → stops.
-     * nodeA predicts A much better (0.9) than root (0.4), so weight should converge to nodeA.
+     * With trace [A, A, A, ...], collectMatchedContexts always returns [root, nodeA] because:
+     * history ends with "A" → matches nodeA, nodeA has no children → stops. nodeA predicts A much
+     * better (0.9) than root (0.4), so weight should converge to nodeA.
      */
     private VlmcRoot buildStableVlmc() {
         VlmcRoot flat = new VlmcRoot();
@@ -306,8 +306,10 @@ public class OnlineBmaTest {
 
         // Check that at least one weight differs
         boolean anyDifferent = false;
-        for (int i = 0; i < onlineLast.getContributions().size()
-                && i < staticResult.getContributions().size(); i++) {
+        for (int i = 0;
+                i < onlineLast.getContributions().size()
+                        && i < staticResult.getContributions().size();
+                i++) {
             double onlineW = onlineLast.getContributions().get(i).getWeight();
             double staticW = staticResult.getContributions().get(i).getWeight();
             if (Math.abs(onlineW - staticW) > 0.01) {

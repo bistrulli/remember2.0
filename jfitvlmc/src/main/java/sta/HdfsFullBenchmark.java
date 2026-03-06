@@ -133,7 +133,8 @@ public class HdfsFullBenchmark {
             System.out.println("VLMC model saved to: " + saveVlmcPath);
         }
 
-        System.out.printf("Benchmark completed in %.1f seconds (eta=%.4f)%n%n", elapsed / 1000.0, eta);
+        System.out.printf(
+                "Benchmark completed in %.1f seconds (eta=%.4f)%n%n", elapsed / 1000.0, eta);
         System.out.println(benchmark.formatReport(result));
 
         AutoBetaSelector selector = new AutoBetaSelector();
