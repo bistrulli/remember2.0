@@ -22,11 +22,17 @@ public class HdfsBenchmark {
     private final double trainRatio;
     private final double alfa;
     private final double[] betas;
+    private final double eta;
 
-    public HdfsBenchmark(double trainRatio, double alfa, double[] betas) {
+    public HdfsBenchmark(double trainRatio, double alfa, double[] betas, double eta) {
         this.trainRatio = trainRatio;
         this.alfa = alfa;
         this.betas = betas;
+        this.eta = eta;
+    }
+
+    public HdfsBenchmark(double trainRatio, double alfa, double[] betas) {
+        this(trainRatio, alfa, betas, 0.05);
     }
 
     public HdfsBenchmark() {
@@ -104,7 +110,7 @@ public class HdfsBenchmark {
 
         for (double beta : betas) {
             List<BenchmarkMetrics.ScoredTrace> onlineScores =
-                    scoreWithStaOnline(vlmc, testAll, beta, 0.05);
+                    scoreWithStaOnline(vlmc, testAll, beta, eta);
             BenchmarkMetrics onlineBm = new BenchmarkMetrics(onlineScores);
             results.put(String.format("BMA beta=%.2f", beta), onlineBm.findBestF1());
         }
