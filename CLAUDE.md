@@ -2,7 +2,7 @@
 
 ## Panoramica
 
-**jfitVLMC** (REMEMBER) e' un'implementazione Java di algoritmi di apprendimento per Variable Length Markov Chain (VLMC). Apprende modelli di Markov adattivi da tracce di esecuzione (formato interno o CSV event log), supporta simulazione, predizione, likelihood analysis con uEMSC (stochastic conformance checking) e generazione automatica di modelli ECF.
+**jfitVLMC** (REMEMBER) e' un'implementazione Java di algoritmi di apprendimento per Variable Length Markov Chain (VLMC). Apprende modelli di Markov adattivi da tracce di esecuzione (formato interno o CSV event log), supporta simulazione, predizione, likelihood analysis con uEMSC (stochastic conformance checking), generazione automatica di modelli ECF, e anomaly detection tramite STA (Stochastic Tree Attention) con Online Bayesian Model Averaging.
 
 ## Java Environment (CRITICAL)
 
@@ -41,7 +41,7 @@ Il progetto e' un reactor Maven con due moduli:
 | Modulo | artifactId | Descrizione |
 |--------|-----------|-------------|
 | `ecf/` | `ecf` | Parser ECF (ANTLR) e strutture dati (Flow, Edge, ECFListener) |
-| `jfitvlmc/` | `jfitvlmc` | Core: learning VLMC, simulazione, predizione, REST API |
+| `jfitvlmc/` | `jfitvlmc` | Core: learning VLMC, simulazione, predizione, STA, benchmark, REST API |
 
 `jfitvlmc` dipende da `ecf` via `${project.version}`. Non serve installazione separata — Maven risolve automaticamente i moduli fratelli nel reactor build.
 
@@ -70,21 +70,33 @@ jfitVLMC/
 │   └── src/
 │       ├── main/java/
 │       │   ├── TestEcfGenerator.java        # (default pkg) CLI per generare ECF da tracce
-│       │   ├── fitvlmc/                     # Core: learning, execution, REST
+│       │   ├── fitvlmc/                     # Core: learning, execution, REST, HDFS parsing
 │       │   │   ├── fitVlmc.java             # Main entry point (CLI + learning)
 │       │   │   ├── EcfNavigator.java        # ECF traversal, VLMC tree construction
 │       │   │   ├── Trace2EcfIntegrator.java # Auto ECF generation from traces
 │       │   │   ├── CsvEventLogReader.java   # CSV event log parser (process mining format)
 │       │   │   ├── RESTVlmc.java            # HTTP handler for prediction API (GET /?ctx=)
+│       │   │   ├── HdfsLogParser.java       # HDFS structured CSV parser + label loader
+│       │   │   ├── HdfsRawLogParser.java    # HDFS raw log parser (11M+ lines, regex-based)
 │       │   │   ├── GenerateEcfToFile.java   # ECF file output utility (standalone main)
 │       │   │   ├── SelfLoopRemover.java     # Self-loop removal from ECF graphs (standalone main)
 │       │   │   ├── DebugEcfComparison.java  # Debug utility per analisi ECF (standalone main)
 │       │   │   └── TestAutoEcfGeneration.java # Test manuale generazione ECF (standalone main)
 │       │   ├── vlmc/                        # VLMC data structures
 │       │   │   ├── VlmcRoot.java            # Root node, tree operations, serialization, simulation
-│       │   │   ├── VlmcNode.java            # Tree node: label, distribution, pruning, clone
+│       │   │   ├── VlmcNode.java            # Tree node: label, distribution, pruning, KL cache, clone
 │       │   │   ├── NextSymbolsDistribution.java # Probability distribution + sampling
 │       │   │   └── vlmcWalker.java          # Visitor pattern interface (functional)
+│       │   ├── sta/                         # STA: Stochastic Tree Attention + anomaly detection
+│       │   │   ├── StaPredictor.java        # Core: static predict + Online BMA (predictOnline)
+│       │   │   ├── StaResult.java           # Prediction result: mixed distribution + contributions
+│       │   │   ├── ContextContribution.java # Per-context weight, KL, depth, distribution
+│       │   │   ├── StaWeightFunction.java   # Functional interface for scoring (klBased)
+│       │   │   ├── StaAnomalyScorer.java    # Trace scoring: static + online, CSV/report output
+│       │   │   ├── AutoBetaSelector.java    # Heuristic + cross-validation beta selection
+│       │   │   ├── BenchmarkMetrics.java    # P/R/F1, threshold search, AUC, comparison tables
+│       │   │   ├── HdfsBenchmark.java       # HDFS benchmark: train/score VLMC vs STA vs BMA
+│       │   │   └── HdfsFullBenchmark.java   # CLI entry point for HDFS benchmark (--eta)
 │       │   └── suffixarray/                 # Pattern matching
 │       │       ├── SuffixArray.java         # String suffix array (Princeton-based)
 │       │       └── SuffixArrayInt.java      # Integer variant with LCP support
@@ -98,10 +110,21 @@ jfitVLMC/
 │           ├── UemscTest.java               # JUnit 5: uEMSC stochastic conformance (5 test)
 │           ├── VlmcNavigationTest.java      # JUnit 5: VLMC tree navigation (7 test)
 │           ├── VlmcSerializationTest.java   # JUnit 5: VLMC model save/load (4 test)
+│           ├── VlmcNodeKLCacheTest.java     # JUnit 5: KL divergence caching (7 test)
 │           ├── NextSymbolsDistributionTest.java # JUnit 5: probability distribution (6 test)
 │           ├── SuffixArrayTest.java         # JUnit 5: suffix array operations (9 test)
 │           ├── SuffixArrayIntTest.java      # JUnit 5: integer suffix array (8 test)
-│           ├── Trace2EcfIntegratorTest.java  # JUnit 5: ECF generation from traces (9 test)
+│           ├── Trace2EcfIntegratorTest.java # JUnit 5: ECF generation from traces (9 test)
+│           ├── StaPredictorTest.java        # JUnit 5: STA static predict, contexts, weights (12 test)
+│           ├── StaWeightFunctionTest.java   # JUnit 5: weight function scoring (5 test)
+│           ├── OnlineBmaTest.java           # JUnit 5: Online BMA convergence, normalization (10 test)
+│           ├── AutoBetaSelectorTest.java    # JUnit 5: beta heuristic and cross-validation (6 test)
+│           ├── BenchmarkMetricsTest.java    # JUnit 5: P/R/F1 metrics computation (6 test)
+│           ├── HdfsLogParserTest.java       # JUnit 5: HDFS log parsing (6 test)
+│           ├── HdfsMiniTest.java            # JUnit 5: HDFS mini benchmark (4 test, tag: e2e)
+│           ├── StaCyberTest.java            # JUnit 5: STA on cyber dataset (4 test, tag: e2e)
+│           ├── AutoBetaCyberTest.java       # JUnit 5: auto-beta on cyber dataset (3 test, tag: e2e)
+│           ├── CyberDatasetGenerator.java   # Test utility: generates synthetic cyber traces
 │           ├── SaTest.java                  # Suffix array test (hardcoded path, legacy)
 │           └── SaTestInt.java               # Integer suffix array test (legacy)
 ├── plan/                                    # Piani di implementazione
@@ -140,24 +163,56 @@ jfitVLMC/
 | `Trace2EcfIntegrator` | `fitvlmc` | Generazione automatica ECF `Flow` da tracce raw (split su spazi, reset su `end$`) |
 | `CsvEventLogReader` | `fitvlmc` | Parser CSV event log (case_id, activity, timestamp). Auto-detection formato. |
 | `RESTVlmc` | `fitvlmc` | HTTP handler: `GET /?ctx=state1-state2-state3` ritorna distribuzione next symbol |
+| `HdfsLogParser` | `fitvlmc` | Parser HDFS structured CSV, label loading, trace file writing |
+| `HdfsRawLogParser` | `fitvlmc` | Parser HDFS raw log (11M+ lines, regex BlockId extraction) |
 | `GenerateEcfToFile` | `fitvlmc` | Utility standalone: genera ECF da file tracce e salva su file |
 | `SelfLoopRemover` | `fitvlmc` | Utility standalone: rimuove self-loop (A->A) da ECF, preserva cicli (A->B->A) |
 | `DebugEcfComparison` | `fitvlmc` | Utility standalone: analisi dettagliata ECF (self-loop, 2-cycle, struttura) |
 | `VlmcRoot` | `vlmc` | Nodo radice: simulazione, likelihood, parsing VLMC da file, DFS traversal |
-| `VlmcNode` | `vlmc` | Nodo albero: label, distribuzione, pruning (Kullback-Leibler), clone, context extraction |
+| `VlmcNode` | `vlmc` | Nodo albero: label, distribuzione, pruning (KL con cache), clone, context extraction |
 | `NextSymbolsDistribution` | `vlmc` | Distribuzione probabilita next symbol con sampling (EnumeratedDistribution) |
 | `vlmcWalker` | `vlmc` | Interfaccia funzionale visitor pattern per DFS |
+| `StaPredictor` | `sta` | Core STA: static predict (softmax su KL-based scores) + Online BMA (predictOnline con fixed-share) |
+| `StaResult` | `sta` | Risultato predizione: distribuzione mixata + contributi per contesto + anomaly score |
+| `ContextContribution` | `sta` | Contributo singolo contesto: peso, KL, profondita, distribuzione |
+| `StaWeightFunction` | `sta` | Interfaccia funzionale per scoring contesti (default: `log(n) * KL`) |
+| `StaAnomalyScorer` | `sta` | Scoring tracce: statico (scoreTrace) + online BMA (scoreTraceOnline), output CSV/report |
+| `AutoBetaSelector` | `sta` | Selezione beta: euristica su tree stats + cross-validation |
+| `BenchmarkMetrics` | `sta` | Metriche: P/R/F1 a threshold, ricerca best F1, AUC, tabelle confronto |
+| `HdfsBenchmark` | `sta` | Benchmark HDFS: train VLMC, score con VLMC/STA/BMA, report comparativo |
+| `HdfsFullBenchmark` | `sta` | CLI entry point benchmark HDFS (--raw-log, --labels, --eta, --vlmc-model, etc.) |
 | `SuffixArray` | `suffixarray` | Suffix array su stringhe: count, first/last occurrence via binary search |
 | `SuffixArrayInt` | `suffixarray` | Suffix array su `ArrayList<Integer>` con supporto LCP (Kasai) |
 | `Flow` | `ECFEntity` | (modulo ecf) Grafo flow: nodi, edges, navigazione |
 | `Edge` | `ECFEntity` | (modulo ecf) Edge: source, target, label |
 | `ECFListener` | `ECFEntity` | (modulo ecf) ANTLR listener: costruisce Flow da parsing |
 
+## STA — Stochastic Tree Attention
+
+Il package `sta` implementa il meccanismo di predizione basato su mixture di contesti VLMC a profondita variabile:
+
+### Static Predict (`StaPredictor.predict`)
+- Raccoglie i contesti matched dalla radice in giu (root + nodi a profondita crescente)
+- Calcola pesi softmax su score `log(max(1,n)) * KL_divergence` (parametro beta)
+- Mixa le distribuzioni dei contesti pesandole
+
+### Online BMA (`StaPredictor.predictOnline`)
+- Aggiornamento Bayesiano online dei pesi ad ogni step della traccia
+- Formula: `w_i <- (1-eta) * w_i * P_i(s_t) / P_mix(s_t) + eta/K`
+- Fixed-share (Herbster & Warmuth 1998): eta > 0 previene weight death
+- Epsilon floor (default 1e-10) previene P=0 irreversibile
+- Gestisce cambi del context set (nuovi contesti, contesti persi)
+
+### HDFS Benchmark
+- `HdfsFullBenchmark` CLI: `--raw-log`, `--labels`, `--eta`, `--vlmc-model`, `--save-vlmc`
+- Confronta VLMC classic vs STA statico vs Online BMA per ogni valore di beta
+- Output: tabella P/R/F1 + CSV report
+
 ## CLI Reference
 
 Alias: `java -jar jfitvlmc/target/jfitvlmc-1.0.0-SNAPSHOT-jar-with-dependencies.jar`
 
-### Tutte le opzioni
+### Tutte le opzioni (fitVlmc)
 
 | Opzione | Tipo | Descrizione |
 |---------|------|-------------|
@@ -182,9 +237,22 @@ Alias: `java -jar jfitvlmc/target/jfitvlmc-1.0.0-SNAPSHOT-jar-with-dependencies.
 | `--csv-separator <char>` | REQUIRED_ARG | Separatore campi CSV (default: `,`) |
 | `-h, --help` | NO_ARG | Mostra help |
 
+### Opzioni HdfsFullBenchmark
+
+| Opzione | Tipo | Descrizione |
+|---------|------|-------------|
+| `--raw-log <path>` | REQUIRED_ARG | HDFS.log (raw log, parsed automatically) |
+| `--structured-log <path>` | REQUIRED_ARG | HDFS.log_structured.csv (alternative) |
+| `--labels <path>` | REQUIRED_ARG | anomaly_label.csv |
+| `--alfa <value>` | REQUIRED_ARG | Pruning alpha (default: 0.01) |
+| `--eta <value>` | REQUIRED_ARG | BMA fixed-share parameter (default: 0.05) |
+| `--output <path>` | REQUIRED_ARG | Output CSV path |
+| `--vlmc-model <path>` | REQUIRED_ARG | Load pre-trained VLMC (skip training) |
+| `--save-vlmc <path>` | REQUIRED_ARG | Save trained VLMC model to file |
+
 ### Bug noti
 
-- **`--pred` senza `--ecf`**: `--vlmc model.vlmc --pred --initCtx "A"` crasha con NPE perché tenta di generare ECF anche in prediction mode. Workaround: fornire anche `--ecf`. Issue: [#8](https://github.com/bistrulli/remember2.0/issues/8)
+- **`--pred` senza `--ecf`**: `--vlmc model.vlmc --pred --initCtx "A"` crasha con NPE perche' tenta di generare ECF anche in prediction mode. Workaround: fornire anche `--ecf`. Issue: [#8](https://github.com/bistrulli/remember2.0/issues/8)
 
 ### Esempi
 
@@ -207,6 +275,10 @@ java -jar <JAR> --vlmc model.vlmc --ecf model.ecf --pred --initCtx "state1 state
 # REST server
 java -jar <JAR> --vlmc model.vlmc --pred_rest 8080
 # Query: GET http://localhost:8080/?ctx=state1-state2-state3
+
+# HDFS Benchmark (anomaly detection)
+java -cp <JAR> sta.HdfsFullBenchmark --raw-log HDFS.log --labels anomaly_label.csv \
+  --eta 0.05 --save-vlmc model.vlmc --output results.csv
 ```
 
 ### Output `--lik`
@@ -230,18 +302,18 @@ La **uEMSC** (unit Earth Mover's Stochastic Conformance, Leemans et al. BPM 2019
 ## Convenzioni Codice
 
 - **Naming**: `CamelCase` per classi, `camelCase` per metodi/variabili
-- **Package**: `fitvlmc` (core), `vlmc` (data structures), `suffixarray` (algorithms), `ECFEntity` (modulo ecf)
+- **Package**: `fitvlmc` (core), `vlmc` (data structures), `sta` (prediction/anomaly), `suffixarray` (algorithms), `ECFEntity` (modulo ecf)
 - **Error handling**: eccezioni checked per I/O, unchecked per errori di programmazione
 - **Logging**: `java.util.logging` per debug/progress (non System.out.println). CLI user output resta su stdout.
 - **Nessun framework DI** — istanziazione diretta
-- **CLI**: java-getopt per parsing argomenti
+- **CLI**: java-getopt per parsing argomenti (fitVlmc), manual switch-case (HdfsFullBenchmark)
 - **Statistiche**: Apache Commons Math 3.6.1 per chi-square e distribuzioni
 - **Parsing**: ANTLR 4.7.2 runtime per parsing ECF (nel modulo ecf)
 - **Utilities**: Apache Commons Lang 3.12.0 per StringUtils/ArrayUtils, jfiglet 0.0.9 per banner ASCII
 - **HTTP**: `com.sun.net.httpserver` (JDK built-in) per REST API
 - **Testing**: JUnit Jupiter 5.10.1 + maven-surefire-plugin 3.2.5 (unit) + maven-failsafe-plugin 3.2.5 (e2e)
 - **Formatting**: Spotless con Google Java Format (stile AOSP), ratchet da `origin/main`
-- **Coverage**: JaCoCo con minimo 35% line coverage (attuale: ~36.5%)
+- **Coverage**: JaCoCo con minimo 35% line coverage
 - **Static analysis**: SpotBugs (effort Max, threshold High, failOnError true)
 
 ## Git Workflow
@@ -265,7 +337,7 @@ Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>
 ```
 
 Types: `feat`, `fix`, `refactor`, `test`, `docs`, `chore`
-Packages: `fitvlmc`, `vlmc`, `suffixarray`, `ci`, `build`
+Packages: `fitvlmc`, `vlmc`, `sta`, `suffixarray`, `ci`, `build`
 
 ### CI Pipeline
 
@@ -278,9 +350,9 @@ Triggerato su push a `main` e su pull request verso `main`.
 
 ### Testing
 
-- **Unit test**: `mvn test` — 87 test (esegue tutti i test TRANNE quelli taggati `e2e`)
+- **Unit test**: `mvn test` — 150 test (esegue tutti i test TRANNE quelli taggati `e2e`)
 - **E2E test**: `mvn verify` — include 4 test taggati `e2e` via Failsafe plugin
-- **Totale**: 91 test (87 unit + 4 e2e)
+- **Totale**: 154 test (150 unit + 4 e2e)
 - **Tag e2e**: usare `@Tag("e2e")` di JUnit 5 per test end-to-end
 
 ### Workflow agentico con git
