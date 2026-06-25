@@ -77,7 +77,7 @@ public class BglLogParser {
             return null;
         }
 
-        String eventType = component + "_" + level;
+        String eventType = component + level;
         return new ParsedLine(eventType, isAnomaly);
     }
 

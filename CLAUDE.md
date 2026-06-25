@@ -4,6 +4,8 @@
 
 **jfitVLMC** (REMEMBER) e' un'implementazione Java di algoritmi di apprendimento per Variable Length Markov Chain (VLMC). Apprende modelli di Markov adattivi da tracce di esecuzione (formato interno o CSV event log), supporta simulazione, predizione, likelihood analysis con uEMSC (stochastic conformance checking), generazione automatica di modelli ECF, e anomaly detection tramite STA (Stochastic Tree Attention) con Online Bayesian Model Averaging.
 
+> Per una guida utente in inglese con tutorial "hello world" su dataset sintetico e spiegazione dettagliata di tutti i parametri, vedi [`README.md`](README.md).
+
 ## Java Environment (CRITICAL)
 
 **Java 17 e Maven 3.x sono richiesti.**
@@ -78,6 +80,7 @@ jfitVLMC/
 │       │   │   ├── RESTVlmc.java            # HTTP handler for prediction API (GET /?ctx=)
 │       │   │   ├── HdfsLogParser.java       # HDFS structured CSV parser + label loader
 │       │   │   ├── HdfsRawLogParser.java    # HDFS raw log parser (11M+ lines, regex-based)
+│       │   │   ├── BglLogParser.java         # BGL (Blue Gene/L) raw log parser + sliding-window sessions
 │       │   │   ├── GenerateEcfToFile.java   # ECF file output utility (standalone main)
 │       │   │   ├── SelfLoopRemover.java     # Self-loop removal from ECF graphs (standalone main)
 │       │   │   ├── DebugEcfComparison.java  # Debug utility per analisi ECF (standalone main)
@@ -96,10 +99,11 @@ jfitVLMC/
 │       │   │   ├── AutoBetaSelector.java    # Heuristic + cross-validation beta selection
 │       │   │   ├── BenchmarkMetrics.java    # P/R/F1, threshold search, AUC, comparison tables
 │       │   │   ├── HdfsBenchmark.java       # HDFS benchmark: train/score VLMC vs STA vs BMA
-│       │   │   └── HdfsFullBenchmark.java   # CLI entry point for HDFS benchmark (--eta)
+│       │   │   ├── HdfsFullBenchmark.java   # CLI entry point for HDFS benchmark (--eta)
+│       │   │   └── BglFullBenchmark.java    # CLI entry point for BGL benchmark (--bgl-log, --window-size)
 │       │   └── suffixarray/                 # Pattern matching
-│       │       ├── SuffixArray.java         # String suffix array (Princeton-based)
-│       │       └── SuffixArrayInt.java      # Integer variant with LCP support
+│       │       ├── SuffixArray.java         # String suffix array — SA-IS algorithm (Nong-Zhang-Chan 2009, O(n))
+│       │       └── SuffixArrayInt.java      # Integer variant (comparison sort) with LCP support (Kasai)
 │       └── test/java/test/
 │           ├── CsvEventLogReaderTest.java   # JUnit 5: CSV parsing, ordering, separators (10 test)
 │           ├── LikelihoodTest.java          # JUnit 5: likelihood, getState, DFS (11 test)
@@ -114,6 +118,9 @@ jfitVLMC/
 │           ├── NextSymbolsDistributionTest.java # JUnit 5: probability distribution (6 test)
 │           ├── SuffixArrayTest.java         # JUnit 5: suffix array operations (9 test)
 │           ├── SuffixArrayIntTest.java      # JUnit 5: integer suffix array (8 test)
+│           ├── SaisCorrectnessTest.java     # JUnit 5: SA-IS suffix array correctness (10 test)
+│           ├── SuffixArrayPerfTest.java     # JUnit 5: SA-IS performance/scaling (3 test, tag: e2e)
+│           ├── BglLogParserTest.java        # JUnit 5: BGL log parsing + windowing (8 test)
 │           ├── Trace2EcfIntegratorTest.java # JUnit 5: ECF generation from traces (9 test)
 │           ├── StaPredictorTest.java        # JUnit 5: STA static predict, contexts, weights (12 test)
 │           ├── StaWeightFunctionTest.java   # JUnit 5: weight function scoring (5 test)
@@ -121,9 +128,9 @@ jfitVLMC/
 │           ├── AutoBetaSelectorTest.java    # JUnit 5: beta heuristic and cross-validation (6 test)
 │           ├── BenchmarkMetricsTest.java    # JUnit 5: P/R/F1 metrics computation (6 test)
 │           ├── HdfsLogParserTest.java       # JUnit 5: HDFS log parsing (6 test)
-│           ├── HdfsMiniTest.java            # JUnit 5: HDFS mini benchmark (4 test, tag: e2e)
-│           ├── StaCyberTest.java            # JUnit 5: STA on cyber dataset (4 test, tag: e2e)
-│           ├── AutoBetaCyberTest.java       # JUnit 5: auto-beta on cyber dataset (3 test, tag: e2e)
+│           ├── HdfsMiniTest.java            # JUnit 5: HDFS mini benchmark (4 test)
+│           ├── StaCyberTest.java            # JUnit 5: STA on cyber dataset (4 test)
+│           ├── AutoBetaCyberTest.java       # JUnit 5: auto-beta on cyber dataset (3 test)
 │           ├── CyberDatasetGenerator.java   # Test utility: generates synthetic cyber traces
 │           ├── SaTest.java                  # Suffix array test (hardcoded path, legacy)
 │           └── SaTestInt.java               # Integer suffix array test (legacy)
@@ -165,6 +172,7 @@ jfitVLMC/
 | `RESTVlmc` | `fitvlmc` | HTTP handler: `GET /?ctx=state1-state2-state3` ritorna distribuzione next symbol |
 | `HdfsLogParser` | `fitvlmc` | Parser HDFS structured CSV, label loading, trace file writing |
 | `HdfsRawLogParser` | `fitvlmc` | Parser HDFS raw log (11M+ lines, regex BlockId extraction) |
+| `BglLogParser` | `fitvlmc` | Parser BGL (Blue Gene/L) raw log: `componente+level` come evento, sessioni a finestra scorrevole fissa (default 20), label anomalia se almeno una riga ha label ≠ `-` |
 | `GenerateEcfToFile` | `fitvlmc` | Utility standalone: genera ECF da file tracce e salva su file |
 | `SelfLoopRemover` | `fitvlmc` | Utility standalone: rimuove self-loop (A->A) da ECF, preserva cicli (A->B->A) |
 | `DebugEcfComparison` | `fitvlmc` | Utility standalone: analisi dettagliata ECF (self-loop, 2-cycle, struttura) |
@@ -181,8 +189,9 @@ jfitVLMC/
 | `BenchmarkMetrics` | `sta` | Metriche: P/R/F1 a threshold, ricerca best F1, AUC, tabelle confronto |
 | `HdfsBenchmark` | `sta` | Benchmark HDFS: train VLMC, score con VLMC/STA/BMA, report comparativo |
 | `HdfsFullBenchmark` | `sta` | CLI entry point benchmark HDFS (--raw-log, --labels, --eta, --vlmc-model, etc.) |
-| `SuffixArray` | `suffixarray` | Suffix array su stringhe: count, first/last occurrence via binary search |
-| `SuffixArrayInt` | `suffixarray` | Suffix array su `ArrayList<Integer>` con supporto LCP (Kasai) |
+| `BglFullBenchmark` | `sta` | CLI entry point benchmark BGL (--bgl-log, --window-size, --alfa, --eta, --output, --vlmc-model, --save-vlmc) |
+| `SuffixArray` | `suffixarray` | Suffix array su stringhe costruito con algoritmo **SA-IS** (Nong-Zhang-Chan 2009, O(n) tempo/spazio): count, first/last occurrence via binary search |
+| `SuffixArrayInt` | `suffixarray` | Suffix array su `ArrayList<Integer>` (comparison sort) con supporto LCP (Kasai) |
 | `Flow` | `ECFEntity` | (modulo ecf) Grafo flow: nodi, edges, navigazione |
 | `Edge` | `ECFEntity` | (modulo ecf) Edge: source, target, label |
 | `ECFListener` | `ECFEntity` | (modulo ecf) ANTLR listener: costruisce Flow da parsing |
@@ -207,6 +216,11 @@ Il package `sta` implementa il meccanismo di predizione basato su mixture di con
 - `HdfsFullBenchmark` CLI: `--raw-log`, `--labels`, `--eta`, `--vlmc-model`, `--save-vlmc`
 - Confronta VLMC classic vs STA statico vs Online BMA per ogni valore di beta
 - Output: tabella P/R/F1 + CSV report
+
+### BGL Benchmark
+- `BglFullBenchmark` CLI: `--bgl-log`, `--window-size`, `--alfa`, `--eta`, `--output`, `--vlmc-model`, `--save-vlmc`
+- Parser dedicato (`BglLogParser`): nessun BlockId nel BGL, quindi le sessioni sono **finestre scorrevoli fisse** (default 20 eventi); evento = `componente+level`; finestra anomala se almeno una riga ha label ≠ `-`
+- Stessa pipeline di confronto VLMC vs STA vs BMA su una sweep di beta + auto-beta euristico
 
 ## CLI Reference
 
@@ -244,6 +258,18 @@ Alias: `java -jar jfitvlmc/target/jfitvlmc-1.0.0-SNAPSHOT-jar-with-dependencies.
 | `--raw-log <path>` | REQUIRED_ARG | HDFS.log (raw log, parsed automatically) |
 | `--structured-log <path>` | REQUIRED_ARG | HDFS.log_structured.csv (alternative) |
 | `--labels <path>` | REQUIRED_ARG | anomaly_label.csv |
+| `--alfa <value>` | REQUIRED_ARG | Pruning alpha (default: 0.01) |
+| `--eta <value>` | REQUIRED_ARG | BMA fixed-share parameter (default: 0.05) |
+| `--output <path>` | REQUIRED_ARG | Output CSV path |
+| `--vlmc-model <path>` | REQUIRED_ARG | Load pre-trained VLMC (skip training) |
+| `--save-vlmc <path>` | REQUIRED_ARG | Save trained VLMC model to file |
+
+### Opzioni BglFullBenchmark
+
+| Opzione | Tipo | Descrizione |
+|---------|------|-------------|
+| `--bgl-log <path>` | REQUIRED_ARG | BGL.log (raw log, parsed automatically) |
+| `--window-size <N>` | REQUIRED_ARG | Dimensione finestra scorrevole per le sessioni (default: 20) |
 | `--alfa <value>` | REQUIRED_ARG | Pruning alpha (default: 0.01) |
 | `--eta <value>` | REQUIRED_ARG | BMA fixed-share parameter (default: 0.05) |
 | `--output <path>` | REQUIRED_ARG | Output CSV path |
@@ -350,10 +376,10 @@ Triggerato su push a `main` e su pull request verso `main`.
 
 ### Testing
 
-- **Unit test**: `mvn test` — 150 test (esegue tutti i test TRANNE quelli taggati `e2e`)
-- **E2E test**: `mvn verify` — include 4 test taggati `e2e` via Failsafe plugin
-- **Totale**: 154 test (150 unit + 4 e2e)
-- **Tag e2e**: usare `@Tag("e2e")` di JUnit 5 per test end-to-end
+- **Unit test**: `mvn test` — 170 test (esegue tutti i test TRANNE quelli taggati `e2e`)
+- **E2E test**: `mvn verify` — include 7 test taggati `e2e` via Failsafe plugin
+- **Totale**: 177 test (170 unit + 7 e2e)
+- **Tag e2e**: usare `@Tag("e2e")` di JUnit 5 per test end-to-end. Attualmente solo `EndToEndTest` (4) e `SuffixArrayPerfTest` (3) sono taggati `e2e`; `HdfsMiniTest`, `StaCyberTest`, `AutoBetaCyberTest` girano come unit test sotto `mvn test`.
 
 ### Workflow agentico con git
 

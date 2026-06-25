@@ -30,7 +30,7 @@ public class BglLogParserTest {
         BglLogParser parser = new BglLogParser();
         BglLogParser.ParsedLine parsed = parser.parseLine(NORMAL_LINE);
         assertNotNull(parsed);
-        assertEquals("KERNEL_INFO", parsed.eventType);
+        assertEquals("KERNELINFO", parsed.eventType);
         assertFalse(parsed.isAnomaly);
     }
 
@@ -39,7 +39,7 @@ public class BglLogParserTest {
         BglLogParser parser = new BglLogParser();
         BglLogParser.ParsedLine parsed = parser.parseLine(ANOMALY_LINE);
         assertNotNull(parsed);
-        assertEquals("APP_FATAL", parsed.eventType);
+        assertEquals("APPFATAL", parsed.eventType);
         assertTrue(parsed.isAnomaly);
     }
 
@@ -79,7 +79,7 @@ public class BglLogParserTest {
         for (HdfsSession s : sessions) {
             assertEquals(3, s.events.size());
             assertFalse(s.isAnomaly);
-            assertEquals("KERNEL_INFO", s.events.get(0));
+            assertEquals("KERNELINFO", s.events.get(0));
         }
         assertEquals("W_0", sessions.get(0).blockId);
         assertEquals("W_1", sessions.get(1).blockId);
