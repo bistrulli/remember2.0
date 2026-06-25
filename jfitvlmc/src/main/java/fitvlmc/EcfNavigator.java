@@ -54,7 +54,7 @@ public class EcfNavigator {
             // System.out.println(String.format("Prune:%d", System.currentTimeMillis()-start));
             this.vlmc.addChild(vn);
             done++;
-            LOGGER.fine(String.format("Progress: %.2f", done / edges.size()));
+            LOGGER.info(String.format("Progress: %.2f%%", 100.0 * done / edges.size()));
             //			if(label==20)
             //				break;
         }
