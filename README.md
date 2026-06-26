@@ -1,18 +1,59 @@
-# jfitVLMC (REMEMBER)
+<div align="center">
 
-**jfitVLMC** is a Java toolkit for learning **Variable Length Markov Chains (VLMC)** from
-execution traces. It turns sequences of events — application logs, process-mining event logs,
-system traces — into a compact, *interpretable* probabilistic model whose memory length adapts
-to the data: contexts that carry predictive information are kept deep, contexts that don't are
-pruned away.
+# 🧠 REMEMBER
 
-On top of the learned model the tool offers:
+**Learn _interpretable_ Variable-Length Markov Chains from event traces — then simulate, predict, score, and detect anomalies.**
+
+![Java](https://img.shields.io/badge/Java-17%2B-orange?logo=openjdk&logoColor=white)
+![Maven](https://img.shields.io/badge/Maven-3.x-blue?logo=apachemaven&logoColor=white)
+
+</div>
+
+---
+
+## What is REMEMBER?
+
+**REMEMBER** turns sequences of events — application logs, process-mining event logs, system
+traces — into a compact, **interpretable** probabilistic model: a **Variable-Length Markov Chain
+(VLMC)** whose memory length *adapts to the data*. Contexts that carry predictive information are
+kept deep; contexts that don't are pruned away. The result is a small tree you can actually read,
+not a black box.
+
+Once the model is learned, REMEMBER lets you **generate** new traces, **predict** the next event,
+**measure** how well a log conforms to the model, and **flag** anomalous behaviour.
+
+> [!NOTE]
+> REMEMBER is implemented as the `jfitvlmc` multi-module Maven project. You will see the name
+> `jfitvlmc` in build paths and in the JAR filename — that is the implementation artifact; the
+> tool itself is **REMEMBER**.
+
+### Who is it for?
+
+| If you… | …REMEMBER gives you |
+|---------|---------------------|
+| Run services that emit logs and want to **understand normal behaviour** | A readable model of what usually follows what |
+| Do **process mining** on CSV event logs | VLMC learning directly from `case_id / activity / timestamp` |
+| Need to **detect anomalies** in execution traces (e.g. HDFS, BGL) | STA + Online Bayesian Model Averaging, with ready-made benchmarks |
+| Want **synthetic data** that mimics a real log | A simulator that samples from the learned distribution |
+| Need a **next-event predictor** behind an API | A built-in HTTP REST endpoint |
+
+### What it does, at a glance
+
+```mermaid
+flowchart LR
+    A["Event traces<br/>(internal / CSV)"] --> B["ECF flow graph<br/>(auto-generated)"]
+    B --> C["VLMC<br/>variable-length<br/>context tree"]
+    C --> D["Simulate<br/>synthetic traces"]
+    C --> E["Predict next event<br/>CLI / REST"]
+    C --> F["Likelihood + uEMSC<br/>conformance"]
+    C --> G["STA / BMA<br/>anomaly detection"]
+```
 
 - **Simulation** — generate new synthetic traces that follow the learned distribution.
 - **Prediction** — given a context, return the probability distribution over the next event
   (also exposed as an HTTP REST endpoint).
 - **Likelihood & conformance** — per-trace / per-prefix likelihood plus **uEMSC** (unit Earth
-  Mover's Stochastic Conformance), a [0, 1] score of how well the log conforms to the model.
+  Mover's Stochastic Conformance), a `[0, 1]` score of how well the log conforms to the model.
 - **Anomaly detection** — **STA (Stochastic Tree Attention)** mixes contexts of different depths
   with a softmax attention, optionally updated online with **Bayesian Model Averaging (BMA)**.
   Ready-made benchmarks for the HDFS and BGL log datasets are included.
@@ -21,17 +62,39 @@ On top of the learned model the tool offers:
 
 ## Table of contents
 
-1. [Concepts in 60 seconds](#concepts-in-60-seconds)
-2. [Requirements & build](#requirements--build)
-3. [Hello World — a synthetic dataset](#hello-world--a-synthetic-dataset)
-4. [Input formats](#input-formats)
-5. [Parameter reference (what each flag means and how to choose it)](#parameter-reference)
-6. [Output files explained](#output-files-explained)
-7. [Prediction & REST API](#prediction--rest-api)
-8. [Anomaly detection (STA / BMA) and benchmarks](#anomaly-detection-sta--bma-and-benchmarks)
-9. [Project layout](#project-layout)
-10. [Testing](#testing)
-11. [Known issues](#known-issues)
+1. [Quickstart](#quickstart)
+2. [Concepts in 60 seconds](#concepts-in-60-seconds)
+3. [Requirements & build](#requirements--build)
+4. [Hello World — a synthetic dataset](#hello-world--a-synthetic-dataset)
+5. [Input formats](#input-formats)
+6. [Parameter reference](#parameter-reference)
+7. [Output files explained](#output-files-explained)
+8. [Prediction & REST API](#prediction--rest-api)
+9. [Anomaly detection (STA / BMA) and benchmarks](#anomaly-detection-sta--bma-and-benchmarks)
+10. [Project layout](#project-layout)
+11. [Testing](#testing)
+12. [Known issues](#known-issues)
+
+---
+
+## Quickstart
+
+```bash
+# 1. Build the runnable JAR (from the repository root)
+mvn clean package -DskipTests
+
+# 2. Create a convenient alias
+export JAR=jfitvlmc/target/jfitvlmc-1.0.0-SNAPSHOT-jar-with-dependencies.jar
+alias remember="java -jar $JAR"
+
+# 3. Learn a model from traces and simulate 5 new ones
+remember --infile traces.txt --vlmcfile model.vlmc --alfa 0.05 --nsim 5
+```
+
+> [!TIP]
+> New to Variable-Length Markov Chains? Read [Concepts in 60 seconds](#concepts-in-60-seconds),
+> then follow the fully worked [Hello World](#hello-world--a-synthetic-dataset) tutorial below —
+> every command and every output in it is real and verified end-to-end.
 
 ---
 
@@ -229,11 +292,11 @@ Plain text, events separated by spaces, each trace terminated by the reserved to
 login browse addcart checkout pay logout end$ login search logout end$ ...
 ```
 
-Notes:
-- The whole file is read as one token stream; line breaks are not significant, so keep events
-  space-separated across line boundaries.
-- If an event name contains `_` followed by a number (e.g. `task_5`), the trailing number is
-  parsed as an edge **cost** in the generated ECF; a non-numeric suffix is ignored.
+> [!NOTE]
+> The whole file is read as one token stream; line breaks are **not** significant, so keep events
+> space-separated across line boundaries. If an event name contains `_` followed by a number
+> (e.g. `task_5`), the trailing number is parsed as an edge **cost** in the generated ECF; a
+> non-numeric suffix is ignored.
 
 ### 2. CSV event log (process-mining format)
 
@@ -263,18 +326,27 @@ with `--csv-case`, `--csv-activity`, `--csv-timestamp`, `--csv-separator`.
 
 Run `remember --help` for the built-in list. Below is the *meaning* and *how to choose* each flag.
 
+> [!IMPORTANT]
+> `--alfa` is the single most important knob — it controls model size vs. detail. **Higher
+> `alfa` (e.g. 0.1) → deeper tree, more contexts, longer memory, risk of overfitting. Lower
+> `alfa` (e.g. 0.01) → smaller, more general model, risk of underfitting.** Typical range
+> 0.01–0.05; start at **0.05**.
+
 ### Core learning
 
 | Flag | Default | Meaning & how to use |
 |------|---------|----------------------|
 | `--infile <file>` | — | **Required for learning.** The trace file (internal or CSV). |
-| `--alfa <float>` | — | **Required for learning.** Significance level of the chi-square pruning test. It is the single most important knob: it controls model size vs. detail. **Higher `alfa` (e.g. 0.1) → deeper tree, more contexts, longer memory, risk of overfitting. Lower `alfa` (e.g. 0.01) → smaller, more general model, risk of underfitting.** Typical range 0.01–0.05. Start at 0.05. |
+| `--alfa <float>` | — | **Required for learning.** Significance level of the chi-square pruning test. See the callout above. |
 | `--vlmcfile <file>` | `model.vlmc` | Where the learned model is written. |
 | `--maxdepth <int>` | 25 | Maximum context depth explored while navigating the ECF graph (longest memory the model may consider). Raise it only if your sequences have genuinely long-range dependencies; it bounds runtime/memory. |
 | `--ecf <file>` | auto | Supply a pre-built ECF flow graph instead of letting the tool generate one from the traces. |
 | `--ecfoutfile <file>` | — | Save the auto-generated ECF graph (useful for inspection or to ship alongside the model). |
 
-### Simulation
+<details>
+<summary><strong>Simulation, scoring/prediction, CSV & misc flags</strong> (click to expand)</summary>
+
+#### Simulation
 
 | Flag | Default | Meaning & how to use |
 |------|---------|----------------------|
@@ -283,17 +355,17 @@ Run `remember --help` for the built-in list. Below is the *meaning* and *how to 
 | `--ntime <int>` | 1 | Auxiliary time parameter used during processing. Leave at the default unless you know you need it. |
 | `--rnd` | off | Generate a *randomized* VLMC derived from an existing model (perturbed distributions) rather than learning from data. |
 
-### Scoring / prediction
+#### Scoring / prediction
 
 | Flag | Default | Meaning & how to use |
 |------|---------|----------------------|
 | `--vlmc <file>` | — | Load a pre-trained model instead of learning. Pair with `--lik`, `--pred`, or `--pred_rest`. |
 | `--lik <file>` | — | Compute per-trace & per-prefix likelihood plus aggregate log-likelihood and uEMSC for the traces in `<file>`. |
-| `--pred` | off | One-shot prediction mode. Requires `--initCtx` (and currently also `--ecf`, see Known issues). |
+| `--pred` | off | One-shot prediction mode. Requires `--initCtx` (and currently also `--ecf`, see [Known issues](#known-issues)). |
 | `--initCtx <ctx>` | — | The starting context for prediction, e.g. `"login browse"` (space-separated). |
 | `--pred_rest <port>` | — | Start the HTTP prediction server on the given port (1–65535). |
 
-### CSV options
+#### CSV options
 
 | Flag | Default | Meaning |
 |------|---------|---------|
@@ -302,11 +374,13 @@ Run `remember --help` for the built-in list. Below is the *meaning* and *how to 
 | `--csv-timestamp <name>` | `timestamp` | Column used to order events within a case. |
 | `--csv-separator <char>` | `,` | Field separator. |
 
-### Misc
+#### Misc
 
 | Flag | Meaning |
 |------|---------|
 | `-h`, `--help` | Show the built-in help banner. |
+
+</details>
 
 ---
 
@@ -320,6 +394,7 @@ Run `remember --help` for the built-in list. Below is the *meaning* and *how to 
 | `<base>.lik` | `--lik` | `trace_id,trace_length,likelihood,log_likelihood`. |
 | `<base>.lik.prefix` | `--lik` | `trace_id,prefix_length,likelihood,prefix,next_activity,possible_activities`. The last column lists every candidate next event with its probability. |
 
+> [!NOTE]
 > The `--lik` output basename is the input file name **with its extension stripped** — scoring
 > `traces.txt` writes `traces.lik`, not `traces.txt.lik`.
 
@@ -388,7 +463,7 @@ as the HDFS benchmark.
 ## Project layout
 
 ```
-jfitVLMC/
+REMEMBER (jfitVLMC repo)
 ├── ecf/                     # ECF module: ANTLR parser + Flow/Edge/ECFListener data structures
 └── jfitvlmc/                # Core module
     └── src/main/java/
@@ -419,8 +494,8 @@ run under `mvn verify`.
 
 ## Known issues
 
-- **`--pred` without `--ecf` throws an NPE.** In prediction mode the tool still tries to generate
-  an ECF, so `--vlmc model.vlmc --pred --initCtx "A"` crashes. **Workaround:** also pass
-  `--ecf model.ecf`. Tracking issue:
-  [#8](https://github.com/bistrulli/remember2.0/issues/8).
-```
+> [!WARNING]
+> **`--pred` without `--ecf` throws an NPE.** In prediction mode the tool still tries to generate
+> an ECF, so `remember --vlmc model.vlmc --pred --initCtx "A"` crashes. **Workaround:** also pass
+> `--ecf model.ecf`. Tracking issue:
+> [#8](https://github.com/bistrulli/remember2.0/issues/8).
