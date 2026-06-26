@@ -62,3 +62,7 @@ dist/
 .claude/settings.local.json
 *.vlmc
 results/*.csv
+results/*.log
+
+# REMEMBER session history (runtime, not source)
+.remember/
